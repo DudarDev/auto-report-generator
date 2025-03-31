@@ -1,7 +1,8 @@
-from jinja2 import Template
+from jinja2 import Environment, FileSystemLoader
 from weasyprint import HTML
 
-def create_pdf(summary):
-    with open("templates/report_template.html") as f:
-        html_content = Template(f.read()).render(summary=summary)
-    HTML(string=html_content).write_pdf("report.pdf")
+def generate_pdf(context, output_path):
+    env = Environment(loader=FileSystemLoader("templates"))
+    template = env.get_template("report_template.html")
+    html_out = template.render(context)
+    HTML(string=html_out).write_pdf(output_path)

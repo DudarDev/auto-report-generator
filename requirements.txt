@@ -5,3 +5,9 @@ google-api-python-client
 jinja2
 pdfkit
 python-dotenv
+yagmail
+gspread
+oauth2client
+jinja2
+weasyprint
+

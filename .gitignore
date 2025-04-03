@@ -1,4 +1,5 @@
 .env
+credentials.json
+gmail_credentials.json
 __pycache__/
-*.pyc
-report.pdf
+*.zip

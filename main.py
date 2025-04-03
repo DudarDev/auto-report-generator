@@ -1,38 +1,27 @@
+from dotenv import load_dotenv
 from gsheet import get_sheet_data
 from pdf_generator import generate_pdf
 from email_sender import send_email
+from zipper import zip_reports
+from context_builder import build_context
 import os
-import shutil
 
-# Отримуємо всі записи з Google Таблиці
+load_dotenv()
+
+REPORTS_DIR = os.getenv("REPORTS_DIR", "reports")
+ZIP_NAME = os.getenv("ZIP_NAME", "all_reports.zip")
+
+os.makedirs(REPORTS_DIR, exist_ok=True)
+
 data = get_sheet_data()
-os.makedirs("reports", exist_ok=True)
+pdf_paths = []
 
-# Генеруємо PDF-звіти
 for i, record in enumerate(data):
-    client_name = record.get("Ім'я клієнта", "Невідомо")
-    task = record.get("Задача", "-")
-    status = record.get("Статус", "-")
-    date = record.get("Дата", "-")
-    comments = record.get("Коментарі", "")
+    context = build_context(record)
+    filename = f"{REPORTS_DIR}/report_{i+1}_{context['client']}.pdf"
+    generate_pdf(context, filename)
+    print(f"[✓] Звіт збережено: {filename}")
+    pdf_paths.append(filename)
 
-    context = {
-        "title": "Автоматичний звіт",
-        "client": client_name,
-        "task": task,
-        "status": status,
-        "summary": f"{task} для клієнта {client_name} {status.lower()}.",
-        "comments": comments,
-        "date": date,
-    }
-
-    output_path = f"reports/report_{i+1}_{client_name}.pdf"
-    generate_pdf(context, output_path)
-    print(f"[✓] Звіт збережено: {output_path}")
-
-# Створюємо ZIP-архів
-shutil.make_archive("all_reports", "zip", "reports")
-print("[✓] Архів створено: all_reports.zip")
-
-# Надсилаємо звіти на email
-send_email("all_reports.zip")
+zip_reports(pdf_paths, ZIP_NAME)
+send_email(ZIP_NAME)

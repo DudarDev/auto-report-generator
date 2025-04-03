@@ -1,45 +1,24 @@
-from gsheet import get_sheet_data
-from pdf_generator import generate_pdf
-from email_sender import send_email
 import os
-import zipfile
+import smtplib
+from email.message import EmailMessage
 
-# Отримуємо всі записи з таблиці
-data = get_sheet_data()
+def send_email(attachment_path):
+    msg = EmailMessage()
+    msg["Subject"] = "Автоматичний звіт"
+    msg["From"] = os.getenv("EMAIL_USER")
+    msg["To"] = os.getenv("EMAIL_TO")
+    msg.set_content("У вкладенні звіт у форматі .zip")
 
-# Створюємо директорію для звітів
-os.makedirs("reports", exist_ok=True)
+    with open(attachment_path, "rb") as f:
+        msg.add_attachment(
+            f.read(),
+            maintype="application",
+            subtype="zip",
+            filename=os.path.basename(attachment_path)
+        )
 
-pdf_paths = []
+    with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
+        smtp.login(os.getenv("EMAIL_USER"), os.getenv("EMAIL_APP_PASSWORD"))
+        smtp.send_message(msg)
 
-# Проходимося по кожному запису
-for i, record in enumerate(data):
-    client_name = record.get("Ім'я клієнта", "Невідомо")
-    task = record.get("Задача", "-")
-    status = record.get("Статус", "-")
-    date = record.get("Дата", "-")
-    comments = record.get("Коментарі", "")
-
-    context = {
-        "title": "Автоматичний звіт",
-        "client": client_name,
-        "task": task,
-        "status": status,
-        "summary": f"{task} для клієнта {client_name} {status.lower()}.",
-        "comments": comments,
-        "date": date,
-    }
-
-    output_path = f"reports/report_{i+1}_{client_name}.pdf"
-    generate_pdf(context, output_path)
-    pdf_paths.append(output_path)
-    print(f"[✓] Звіт збережено: {output_path}")
-
-# Створюємо архів з звітами
-with zipfile.ZipFile("all_reports.zip", "w") as archive:
-    for path in pdf_paths:
-        archive.write(path)
-print("[✓] Архів створено: all_reports.zip")
-
-# Надсилаємо email
-send_email("all_reports.zip")
+    print(f"[✓] Email: {attachment_path} надіслано!")

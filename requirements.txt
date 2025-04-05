@@ -171,3 +171,4 @@ websocket-client==1.8.0
 yagmail==0.15.293
 yarl==1.18.3
 zopfli==0.2.3.post1
+streamlit

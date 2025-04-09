@@ -1,4 +1,3 @@
-cleaned_requirements
 google-auth
 google-generativeai
 gspread

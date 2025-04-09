@@ -1,13 +1,16 @@
 # Makefile
 
 run:
-	python main.py
+    python main.py
 
 test:
-	python test_connection.py
+    python test_connection.py
 
 format:
-	black . --line-length 100
+    black . --line-length 100
 
 lint:
-	flake8 . --ignore=E501
+    flake8 . --ignore=E501	
+	
+streamlit:
+    streamlit run app.py

@@ -367,3 +367,4 @@ AttributeError: 'bytes' object has no attribute 'encode'. Did you mean: 'decode'
 2025-04-07 07:04:22,408 - DEBUG - Took 0.003s to prune 'name'
 2025-04-07 07:04:22,410 - INFO - name pruned
 2025-04-07 07:04:23,456 - INFO - ✅ Email надіслано до 666devilsmoke666@gmail.com
+2025-04-09 06:55:59,976 - INFO - ✅ Email надіслано до test@example.com

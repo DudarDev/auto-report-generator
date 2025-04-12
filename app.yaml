@@ -1,0 +1,6 @@
+runtime: python312
+entrypoint: streamlit run app.py
+
+handlers:
+  - url: /.*
+    script: auto

@@ -6,3 +6,5 @@ python-dotenv
 streamlit
 weasyprint
 pandas
+openai
+oauth2client

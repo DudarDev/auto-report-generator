@@ -1,5 +1,20 @@
+# Секрети (не потрапляють в Docker-образ!)
+.env
+credentials.json
+gmail_credentials.json
+
+# Python кеші та лог-файли
 __pycache__/
 *.pyc
 *.log
-.env
-.env.*
+
+# Репорти, які генеруються
+*.zip
+/reports/
+
+# Git-папки
+.git/
+.gitignore
+
+# Інше
+.DS_Store

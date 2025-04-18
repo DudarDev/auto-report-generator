@@ -1,5 +1,6 @@
 run:
-	streamlit run app/run_app.py
+	PYTHONPATH=. streamlit run app/run_app.py
+
 
 test:
 	PYTHONPATH=./ python tests/test_connection.py

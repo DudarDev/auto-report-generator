@@ -16,9 +16,9 @@ def check_gsheet():
         client = gspread.authorize(creds)
         sheet = client.open_by_key(os.getenv("GOOGLE_SHEET_ID"))
         data = sheet.sheet1.get_all_records()
-        print("[✓] Google Sheets: з'єднання успішне, рядків:", len(data))
+        print(f"[✅] Google Sheets: з'єднання успішне, рядків: {len(data)}")
     except Exception as e:
-        print("[X] Google Sheets: помилка ➤", e)
+        print("[❌] Google Sheets: помилка ►", e)
 
 # 2. Перевірка Gemini
 def check_gemini():
@@ -26,11 +26,11 @@ def check_gemini():
         genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
         model = genai.GenerativeModel("models/gemini-1.5-pro-latest")
         response = model.generate_content("Скажи Привіт!")
-        print("[✓] Gemini API: відповідь ➤", response.text.strip())
+        print("[✅] Gemini API: відповідь —", response.text.strip())
     except Exception as e:
-        print("[X] Gemini API: помилка ➤", e)
+        print("[❌] Gemini API: помилка ►", e)
 
-# 3. Перевірка Email
+# 3. Перевірка Email SMTP
 def check_email():
     try:
         msg = EmailMessage()
@@ -42,11 +42,12 @@ def check_email():
         with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
             smtp.login(os.getenv("EMAIL_USER"), os.getenv("EMAIL_APP_PASSWORD"))
             smtp.send_message(msg)
-        print("[✓] Email: повідомлення надіслано!")
+            print("[✅] Email: повідомлення надіслано!")
     except Exception as e:
-        print("[X] Email: помилка ➤", e)
+        print("[❌] Email: помилка ►", e)
 
-# Запуск тестів
-check_gsheet()
-check_gemini()
-check_email()
+# Запуск
+if __name__ == "__main__":
+    check_gsheet()
+    check_gemini()
+    check_email()

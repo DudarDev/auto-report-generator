@@ -8,3 +8,6 @@ weasyprint
 pandas
 openai
 oauth2client
+pytest
+flake8
+black

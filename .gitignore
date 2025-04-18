@@ -1,6 +1,20 @@
+# Секрети
 .env
 credentials.json
 gmail_credentials.json
+
+# Кеші та тимчасові файли
 __pycache__/
+*.pyc
+*.log
+
+# Генеровані архіви
 *.zip
+/reports/
+
+# Індивідуально, не глобально ігноруй json
+
 /reports
+
+google-cloud-sdk/
+

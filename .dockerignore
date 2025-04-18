@@ -1,20 +1,24 @@
-# Секрети (не потрапляють в Docker-образ!)
+# Секрети
 .env
-credentials.json
-gmail_credentials.json
+# ігноруй всі .json крім ключа для GCP
+*.json
+!autoreportbot-5392a52edec4.json
 
-# Python кеші та лог-файли
+
+# Python кеші
 __pycache__/
 *.pyc
+*.pyo
 *.log
 
-# Репорти, які генеруються
-*.zip
+# Репорти
 /reports/
+*.zip
 
-# Git-папки
-.git/
+# Git
+.git
 .gitignore
 
-# Інше
+# IDE/OS
 .DS_Store
+.vscode/

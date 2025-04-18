@@ -1,8 +1,8 @@
 run:
-	python main.py
+	streamlit run app/run_app.py
 
 test:
-	python test_connection.py
+	PYTHONPATH=./ python tests/test_connection.py
 
 format:
 	black . --line-length 100
@@ -11,13 +11,13 @@ lint:
 	flake8 . --ignore=E501
 
 streamlit:
-	streamlit run app.py
+	streamlit run app/run_app.py
 
-# Запуск усього проєкту (формат, тест, Streamlit)
-project: format lint test
-	streamlit run app.py
+# 🔄 Запуск усього проєкту (формат, лінт, тести, Streamlit)
+project: format lint unittest
+	streamlit run app/app.py
 
-# Build & deploy на GCP
+# ☁️ Build & deploy на GCP
 build:
 	gcloud builds submit --tag gcr.io/autoreportbot/auto-report .
 
@@ -28,4 +28,9 @@ deploy:
 		--region europe-west1 \
 		--allow-unauthenticated
 
+# 🧪 Юніт-тести з правильним шляхом
+unittest:
+	PYTHONPATH=./ pytest tests/
+
+# 🔁 Збірка і деплой
 all: build deploy

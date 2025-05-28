@@ -4,3 +4,4 @@ gmail_credentials.json
 __pycache__/
 *.zip
 /reports
+*.json

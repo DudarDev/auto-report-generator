@@ -16,6 +16,8 @@ __pycache__/
 
 /reports
 
+.tmp/
+
 google-cloud-sdk/
 
 google-cloud-cli-470.0.0-linux-x86_64.tar.gz

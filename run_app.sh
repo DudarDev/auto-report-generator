@@ -4,4 +4,4 @@
 export PYTHONPATH=$(pwd)
 
 # Запускаємо Streamlit
-streamlit run app/run_app.py
+python -m streamlit run app/run_app.py

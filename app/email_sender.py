@@ -1,56 +1,62 @@
 # /workspaces/auto-report-generator/app/email_sender.py
 import os
 import smtplib
-import ssl # Потрібен для ssl.create_default_context()
+import ssl
 from email.message import EmailMessage
 from dotenv import load_dotenv
-import traceback # Для детального виводу помилок
+import traceback
 
 load_dotenv()
+print(f"INFO: [email_sender.py] Module loaded. Attempted to load .env file.")
 
-def send_email(file_path: str, recipient: str = None) -> bool: # Змінено повернення на bool
+def send_email(file_path: str, recipient: str = None) -> bool:
     """Надсилає ZIP-файл на email та повертає True у разі успіху, False - у разі помилки."""
     
-    email_subject = "Ваш автоматичний звіт" # Можна зробити динамічнішим, якщо потрібно
-    email_from = os.getenv("EMAIL_USER")
-    # Використовуємо переданого отримувача, або EMAIL_TO_DEFAULT, якщо є
-    email_to = recipient or os.getenv("EMAIL_TO_DEFAULT", os.getenv("EMAIL_TO")) # EMAIL_TO_DEFAULT - як отримувач за замовчуванням
-    
+    print(f"INFO: [email_sender.py] Preparing to send email with attachment: {file_path}")
+
+    email_subject = "Ваш автоматичний звіт"
+    email_from_user = os.getenv("EMAIL_USER")
+    email_to_address = recipient or os.getenv("EMAIL_TO_DEFAULT") or os.getenv("EMAIL_TO")
     email_host = os.getenv("EMAIL_HOST")
     email_port_str = os.getenv("EMAIL_PORT")
-    email_password = os.getenv("EMAIL_APP_PASSWORD")
+    email_app_password = os.getenv("EMAIL_APP_PASSWORD")
 
-    print(f"INFO: [email_sender.py] Preparing to send email.")
-    print(f"  From: {email_from}")
-    print(f"  To: {email_to}")
-    print(f"  Subject: {email_subject}")
-    print(f"  Attachment path: {file_path}")
-    print(f"  SMTP Host: {email_host}")
-    print(f"  SMTP Port: {email_port_str}")
-    print(f"  SMTP User: {email_user}")
-    print(f"  SMTP App Password: {'********' if email_password else 'NOT SET'}")
+    print(f"  Attempting Send Details:")
+    print(f"    From: {email_from_user}")
+    print(f"    To: {email_to_address}")
+    print(f"    Subject: {email_subject}")
+    print(f"    Attachment path: {file_path}")
+    print(f"    SMTP Host: {email_host}")
+    print(f"    SMTP Port: {email_port_str}")
+    print(f"    SMTP User (for login): {email_from_user}")
+    print(f"    SMTP App Password: {'********' if email_app_password else 'NOT SET'}")
 
+    required_vars = {
+        "EMAIL_USER (for From & Login)": email_from_user,
+        "EMAIL_TO (effective)": email_to_address,
+        "EMAIL_HOST": email_host,
+        "EMAIL_PORT": email_port_str,
+        "EMAIL_APP_PASSWORD": email_app_password
+    }
 
-    if not all([email_from, email_to, email_host, email_port_str, email_password]):
-        print("ERROR: [email_sender.py] Not all required email configuration variables are set in environment.")
-        print(f"  EMAIL_FROM: {'Set' if email_from else 'NOT SET'}")
-        print(f"  EMAIL_TO (effective): {'Set' if email_to else 'NOT SET'}")
-        print(f"  EMAIL_HOST: {'Set' if email_host else 'NOT SET'}")
-        print(f"  EMAIL_PORT: {'Set' if email_port_str else 'NOT SET'}")
-        print(f"  EMAIL_APP_PASSWORD: {'Set' if email_password else 'NOT SET'}")
+    missing_vars = [name for name, value in required_vars.items() if not value]
+    if missing_vars:
+        print(f"ERROR: [email_sender.py] Not all required email configuration variables are set: {', '.join(missing_vars)}")
+        for name, value in required_vars.items():
+             print(f"    {name}: {'Set' if value else 'NOT SET'}")
         return False
 
     try:
         email_port = int(email_port_str)
-    except ValueError:
+    except (ValueError, TypeError):
         print(f"ERROR: [email_sender.py] Invalid EMAIL_PORT value: '{email_port_str}'. Must be an integer.")
         return False
 
     msg = EmailMessage()
     msg["Subject"] = email_subject
-    msg["From"] = email_from
-    msg["To"] = email_to
-    msg.set_content("У вкладенні ваш автоматично згенерований звіт.")
+    msg["From"] = email_from_user
+    msg["To"] = email_to_address
+    msg.set_content(f"Шановний отримувач,\n\nУ вкладенні ваш автоматично згенерований звіт '{os.path.basename(file_path)}'.\n\nЗ найкращими побажаннями,\nВаш Автоматичний Генератор Звітів")
 
     try:
         with open(file_path, "rb") as f:
@@ -62,45 +68,32 @@ def send_email(file_path: str, recipient: str = None) -> bool: # Змінено 
         print(f"ERROR: [email_sender.py] Attachment file not found: {file_path}")
         return False
     except Exception as e:
-        print(f"ERROR: [email_sender.py] Could not read or attach file: {e}")
+        print(f"ERROR: [email_sender.py] Could not read or attach file '{file_path}': {e}")
         traceback.print_exc()
         return False
         
     context = ssl.create_default_context()
     try:
-        print("INFO: [email_sender.py] Attempting to connect to SMTP server...")
+        print(f"INFO: [email_sender.py] Attempting to connect to SMTP server: {email_host}:{email_port}")
         with smtplib.SMTP_SSL(email_host, email_port, context=context) as smtp:
-            smtp.set_debuglevel(1)  # Вмикає детальне логування SMTP команд
-            print("INFO: [email_sender.py] Attempting to login to SMTP server...")
-            smtp.login(email_user, email_password)
-            print("INFO: [email_sender.py] Logged in. Attempting to send message...")
+            smtp.set_debuglevel(1)
+            print(f"INFO: [email_sender.py] Attempting to login to SMTP server as user: {email_from_user}")
+            smtp.login(email_from_user, email_app_password)
+            print("INFO: [email_sender.py] Logged in successfully. Attempting to send message...")
             smtp.send_message(msg)
-            print(f"SUCCESS: [email_sender.py] Email successfully sent to {email_to}!")
+            print(f"SUCCESS: [email_sender.py] Email successfully sent to {email_to_address}!")
         return True
     except smtplib.SMTPAuthenticationError as e:
         print(f"ERROR: [email_sender.py] SMTP Authentication Error: {e}. Check EMAIL_USER and EMAIL_APP_PASSWORD.")
         traceback.print_exc()
         return False
+    except smtplib.SMTPException as e:
+        print(f"ERROR: [email_sender.py] SMTP Error: {e}")
+        traceback.print_exc()
+        return False
     except Exception as e:
-        print(f"ERROR: [email_sender.py] Failed to send email: {e}")
+        print(f"ERROR: [email_sender.py] Failed to send email due to an unexpected error: {e}")
         traceback.print_exc()
         return False
 
-if __name__ == '__main__':
-    # Блок для тестування самого send_email, якщо потрібно
-    # Переконайтеся, що всі змінні середовища встановлені, або використовуйте .env
-    print("Testing send_email function directly...")
-    # Потрібно створити тимчасовий zip файл для тестування
-    test_zip_path = "test_report.zip"
-    if not os.path.exists(test_zip_path):
-        with open(test_zip_path, "w") as f:
-            f.write("This is a test zip content.") # Створюємо фейковий zip для тесту
-    
-    # Переконайтеся, що EMAIL_TO_DEFAULT або отримувач встановлені
-    test_recipient_email = os.getenv("EMAIL_TEST_RECIPIENT", "your_test_email@example.com")
-    if send_email(test_zip_path, recipient=test_recipient_email):
-        print("Direct test: Email sent successfully.")
-    else:
-        print("Direct test: Email sending failed.")
-    if os.path.exists(test_zip_path):
-        os.remove(test_zip_path)
+# ... (ваш тестовий блок if __name__ == '__main__':, якщо потрібен) ...

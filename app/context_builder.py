@@ -1,61 +1,57 @@
 # /workspaces/auto-report-generator/app/context_builder.py
 import os
 from dotenv import load_dotenv
-# Припускаємо, що gpt_writer.py знаходиться в корені проекту
-from gpt_writer import generate_summary_data 
+import traceback
 
-# load_dotenv() тут може бути не обов'язковим, якщо GEMINI_API_KEY 
-# встановлюється глобально або в gpt_writer.py
+# Якщо APP_INTERNAL_KEYS визначено в run_app.py і run_app.py в тій же папці 'app':
+# from .run_app import APP_INTERNAL_KEYS
+# Інакше, для узгодженості, визначте його тут так само, як у gsheet.py
+# АБО створіть спільний config.py для таких констант
+EXPECTED_INTERNAL_KEYS = ["client_name", "task", "status", "date", "comments", "amount"] 
+
+try:
+    from gpt_writer import generate_summary_data 
+except ImportError:
+    print("ERROR: [context_builder.py] Failed to import generate_summary_data from gpt_writer.py.")
+    def generate_summary_data(data_for_summary: dict) -> str:
+        return "Помилка: Модуль gpt_writer не завантажено."
+
 load_dotenv() 
 
-# Внутрішні стандартні ключі, які ця функція очікує отримати в `record`
-# після того, як дані були оброблені (наприклад, через мапування в gsheet.py)
-# Ці ключі мають співпадати з ключами в EXPECTED_APP_FIELDS у run_app.py
-INTERNAL_CLIENT_NAME_KEY = "client_name"
-INTERNAL_TASK_KEY = "task"
-INTERNAL_STATUS_KEY = "status"
-INTERNAL_DATE_KEY = "date"
-INTERNAL_COMMENTS_KEY = "comments"
-INTERNAL_AMOUNT_KEY = "amount" # Приклад
-
 def build_context(record: dict) -> dict:
-    """
-    Будує контекст для одного запису звіту, використовуючи стандартизовані ключі.
-    Викликає Gemini для генерації резюме.
-    """
-    print(f"INFO: [context_builder.py] Building context for record: {record}")
+    if not isinstance(record, dict):
+        print(f"ERROR: [context_builder.py] Expected a dictionary for 'record', but got {type(record)}")
+        return {"title": "Помилка обробки запису", "client": "Н/Д", "task": "Н/Д", "status": "Н/Д", "summary": "Невірний формат запису", "comments": "", "date": "", "amount": 0}
 
-    client_name = record.get(INTERNAL_CLIENT_NAME_KEY, "Невідомо")
-    task = record.get(INTERNAL_TASK_KEY, "-")
-    status = record.get(INTERNAL_STATUS_KEY, "-")
-    date = record.get(INTERNAL_DATE_KEY, "-")
-    comments = record.get(INTERNAL_COMMENTS_KEY, "")
-    amount = record.get(INTERNAL_AMOUNT_KEY, 0) 
+    print(f"INFO: [context_builder.py] Building context for record (first 3 keys from EXPECTED): { {k: record.get(k) for k in EXPECTED_INTERNAL_KEYS[:3]} }...")
+
+    client_name = record.get(EXPECTED_INTERNAL_KEYS[0], "Невідомо")
+    task = record.get(EXPECTED_INTERNAL_KEYS[1], "-")
+    status = record.get(EXPECTED_INTERNAL_KEYS[2], "-")
+    date_val = record.get(EXPECTED_INTERNAL_KEYS[3], "-")
+    comments = record.get(EXPECTED_INTERNAL_KEYS[4], "")
+    amount = record.get(EXPECTED_INTERNAL_KEYS[5], 0) 
 
     summary_data_for_gemini = {
-        # Передаємо дані для Gemini, використовуючи наші внутрішні ключі
-        # Важливо, щоб Gemini отримував значущі дані
         "Клієнт": client_name,
         "Завдання": task,
         "Статус": status,
         "Коментарі": comments,
-        "Дата": date
+        "Дата": date_val
     }
-    # Видаляємо порожні значення перед відправкою в Gemini, щоб не засмічувати промпт
-    summary_data_for_gemini = {k: v for k, v in summary_data_for_gemini.items() if v and str(v).strip() and v != "-"}
+    summary_data_for_gemini = {k: v for k, v in summary_data_for_gemini.items() if v and str(v).strip() and str(v) != "-"}
 
-
-    summary = "Резюме не вдалося згенерувати." # Значення за замовчуванням
-    if summary_data_for_gemini: # Генеруємо саммарі, тільки якщо є дані
+    summary = "Резюме не вдалося згенерувати." 
+    if summary_data_for_gemini: 
         try:
+            print(f"INFO: [context_builder.py] Calling Gemini for summary with data: {summary_data_for_gemini}")
             summary = generate_summary_data(summary_data_for_gemini)
         except Exception as e:
             print(f"ERROR: [context_builder.py] Failed to generate summary using Gemini: {e}")
-            # traceback.print_exc() # Можна додати для детального логування
+            traceback.print_exc()
     else:
-        print("INFO: [context_builder.py] Not enough data to generate summary with Gemini.")
+        print("INFO: [context_builder.py] Not enough data for Gemini summary.")
         summary = "Недостатньо даних для автоматичного резюме."
-
 
     context = {
         "title": "Автоматичний звіт", 
@@ -64,8 +60,8 @@ def build_context(record: dict) -> dict:
         "status": status,
         "summary": summary, 
         "comments": comments,
-        "date": date,
+        "date": date_val,
         "amount": amount 
     }
-    print(f"INFO: [context_builder.py] Context built: {{'client': '{client_name}', 'task': '{task[:20]}...'}}")
+    print(f"INFO: [context_builder.py] Context built: {{'client': '{client_name}', 'task': '{str(task)[:20]}...'}}")
     return context

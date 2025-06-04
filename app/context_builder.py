@@ -3,11 +3,12 @@ import os
 from dotenv import load_dotenv
 import traceback
 
-# Якщо APP_INTERNAL_KEYS визначено в run_app.py і run_app.py в тій же папці 'app':
-# from .run_app import APP_INTERNAL_KEYS
-# Інакше, для узгодженості, визначте його тут так само, як у gsheet.py
-# АБО створіть спільний config.py для таких констант
-EXPECTED_INTERNAL_KEYS = ["client_name", "task", "status", "date", "comments", "amount"] 
+# Імпортуємо APP_INTERNAL_KEYS
+try:
+    from .run_app import APP_INTERNAL_KEYS 
+except ImportError:
+    print("WARNING: [context_builder.py] Could not import APP_INTERNAL_KEYS from .run_app. Using a fallback list.")
+    APP_INTERNAL_KEYS = ["client_name", "task", "status", "date", "comments", "amount"] 
 
 try:
     from gpt_writer import generate_summary_data 
@@ -23,17 +24,20 @@ def build_context(record: dict) -> dict:
         print(f"ERROR: [context_builder.py] Expected a dictionary for 'record', but got {type(record)}")
         return {"title": "Помилка обробки запису", "client": "Н/Д", "task": "Н/Д", "status": "Н/Д", "summary": "Невірний формат запису", "comments": "", "date": "", "amount": 0}
 
-    print(f"INFO: [context_builder.py] Building context for record (first 3 keys from EXPECTED): { {k: record.get(k) for k in EXPECTED_INTERNAL_KEYS[:3]} }...")
+    print(f"INFO: [context_builder.py] Building context for record (first 3 keys from APP_INTERNAL_KEYS): { {k: record.get(k) for k in APP_INTERNAL_KEYS[:3]} }...")
 
-    client_name = record.get(EXPECTED_INTERNAL_KEYS[0], "Невідомо")
-    task = record.get(EXPECTED_INTERNAL_KEYS[1], "-")
-    status = record.get(EXPECTED_INTERNAL_KEYS[2], "-")
-    date_val = record.get(EXPECTED_INTERNAL_KEYS[3], "-")
-    comments = record.get(EXPECTED_INTERNAL_KEYS[4], "")
-    amount = record.get(EXPECTED_INTERNAL_KEYS[5], 0) 
+    # Використовуємо APP_INTERNAL_KEYS для отримання значень
+    # Це робить код більш стійким до змін у порядку або наявності полів
+    client_name = record.get(APP_INTERNAL_KEYS[APP_INTERNAL_KEYS.index("client_name")], "Невідомо") if "client_name" in APP_INTERNAL_KEYS else "Невідомо"
+    task = record.get(APP_INTERNAL_KEYS[APP_INTERNAL_KEYS.index("task")], "-") if "task" in APP_INTERNAL_KEYS else "-"
+    status = record.get(APP_INTERNAL_KEYS[APP_INTERNAL_KEYS.index("status")], "-") if "status" in APP_INTERNAL_KEYS else "-"
+    date_val = record.get(APP_INTERNAL_KEYS[APP_INTERNAL_KEYS.index("date")], "-") if "date" in APP_INTERNAL_KEYS else "-"
+    comments = record.get(APP_INTERNAL_KEYS[APP_INTERNAL_KEYS.index("comments")], "") if "comments" in APP_INTERNAL_KEYS else ""
+    amount = record.get(APP_INTERNAL_KEYS[APP_INTERNAL_KEYS.index("amount")], 0) if "amount" in APP_INTERNAL_KEYS else 0
+
 
     summary_data_for_gemini = {
-        "Клієнт": client_name,
+        "Клієнт": client_name, # Ці ключі для промпту Gemini, можуть бути українською
         "Завдання": task,
         "Статус": status,
         "Коментарі": comments,

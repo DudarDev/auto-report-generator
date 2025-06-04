@@ -147,4 +147,3 @@ def get_sheet_data(sheet_id: Optional[str] = None,
     else:
         print("ERROR: [gsheet.py] No sheet_id or csv_file provided to get_sheet_data.")
         return None
-

@@ -1,16 +1,17 @@
 # /workspaces/auto-report-generator/app/ui_components.py
-import traceback
 import streamlit as st
-import pandas as pd # Для читання заголовків CSV у функції мапування
-from typing import Dict, List, Optional, Any # Додано Any
+import pandas as pd
+from typing import Dict, List, Optional, Any, Tuple
+
+# Імпортуємо конфігурацію полів
+from .config_fields import EXPECTED_APP_FIELDS 
 
 # Словники з текстами для різних мов
-# Ви можете розширити цей словник або завантажувати тексти з JSON/YAML файлів
 LANGUAGES = {
     "uk": {
         "page_title": "Генератор Звітів",
         "app_title": "📋 АВТО-ГЕНЕРАТОР ЗВІТІВ",
-        "app_subtitle": "Згенеруйте звіт 🧾 і отримайте його на email 📩",
+        "app_subtitle": "Згенеруйте звіт 🧾 і отримаєте його на email 📩",
         "select_language": "Оберіть мову:",
         "select_data_source": "Оберіть джерело даних:",
         "google_sheet_id_option": "Google Sheet ID",
@@ -21,7 +22,7 @@ LANGUAGES = {
         "generate_button": "🚀 Згенерувати та надіслати звіт",
         "mapping_header": "⚙️ Зіставлення стовпців вашого CSV файлу",
         "mapping_caption": "Будь ласка, вкажіть, які стовпці з вашого файлу відповідають необхідним полям. Якщо відповідного стовпця немає, залиште порожнім.",
-        "report_field_prefix": "Поле звіту",
+        "report_field_prefix": "Поле звіту", # Не використовується зараз, але може знадобитися
         "select_csv_column_for": "Оберіть стовпець CSV для",
         "warning_enter_email": "Будь ласка, введіть email клієнта.",
         "warning_enter_gsheet_id": "Будь ласка, введіть Google Sheet ID.",
@@ -31,7 +32,8 @@ LANGUAGES = {
         "spinner_generating": "Генеруємо звіт... Це може зайняти деякий час. ⏳",
         "success_report_sent": "✅ Звіт успішно згенеровано та надіслано на",
         "error_report_generation": "❌ Виникла помилка під час генерації або надсилання звіту:",
-        # Додайте сюди переклади для назв полів з EXPECTED_APP_FIELDS
+        "error_csv_header_read": "Помилка при читанні заголовків CSV або відображенні мапування",
+        # Переклади для назв полів
         "client_name_label": "Ім'я/Назва Клієнта",
         "task_label": "Завдання/Послуга",
         "status_label": "Статус",
@@ -63,6 +65,7 @@ LANGUAGES = {
         "spinner_generating": "Generating report... This may take some time. ⏳",
         "success_report_sent": "✅ Report successfully generated and sent to",
         "error_report_generation": "❌ An error occurred while generating or sending the report:",
+        "error_csv_header_read": "Error reading CSV headers or displaying mapping",
         "client_name_label": "Client Name/Title",
         "task_label": "Task/Service",
         "status_label": "Status",
@@ -73,36 +76,31 @@ LANGUAGES = {
 }
 
 def get_texts(language_code: str = "uk") -> Dict[str, str]:
-    """Повертає словник текстів для обраної мови."""
     return LANGUAGES.get(language_code, LANGUAGES["uk"])
 
 def language_selector() -> str:
-    """Створює селектор мови у бічній панелі та повертає код обраної мови."""
     lang_options_display = {"Українська": "uk", "English": "en"}
-    
-    # Використовуємо st.session_state для збереження обраної мови
     if 'selected_language_display' not in st.session_state:
-        st.session_state.selected_language_display = "Українська" # Мова за замовчуванням
+        st.session_state.selected_language_display = "Українська" 
 
-    # Отримуємо поточні тексти для підпису селектора
-    # Це створить невелику залежність, але дозволить перекласти сам селектор
-    # Можна обійти, якщо підпис селектора буде двомовним одразу
-    temp_texts = get_texts(lang_options_display.get(st.session_state.selected_language_display, "uk"))
-
+    # Використовуємо двомовний підпис, щоб уникнути залежності від поточного стану texts
     selected_lang_display = st.sidebar.selectbox(
-        temp_texts.get("select_language", "Оберіть мову / Select language:"), 
+        "Оберіть мову / Select language:", 
         options=list(lang_options_display.keys()),
-        key="language_select_widget" # Ключ для віджета
+        index=list(lang_options_display.keys()).index(st.session_state.selected_language_display), # Встановлюємо поточне значення
+        key="language_select_widget_main"
     )
-    st.session_state.selected_language_display = selected_lang_display # Оновлюємо стан
+    if st.session_state.selected_language_display != selected_lang_display:
+        st.session_state.selected_language_display = selected_lang_display
+        st.rerun() # Перезапускаємо, щоб оновити тексти на сторінці
+        
     return lang_options_display.get(selected_lang_display, "uk")
 
-def display_csv_column_mapping_ui(texts: Dict[str, str], csv_file_obj: Any, expected_app_fields: Dict[str, str]) -> Optional[Dict[str, str]]:
-    """Відображає UI для мапування стовпців CSV та повертає мапування."""
+def display_csv_column_mapping_ui(texts: Dict[str, str], csv_file_obj: Any) -> Optional[Dict[str, str]]:
     if csv_file_obj is None:
         return None
     
-    user_column_mapping = None
+    user_column_mapping_result = None
     try:
         df_headers = pd.read_csv(csv_file_obj, nrows=0, encoding='utf-8').columns.tolist()
         csv_file_obj.seek(0) 
@@ -111,42 +109,87 @@ def display_csv_column_mapping_ui(texts: Dict[str, str], csv_file_obj: Any, expe
         st.caption(texts["mapping_caption"])
         
         temp_mapping = {}
-        # Використовуємо st.columns для кращого розташування
-        num_fields = len(expected_app_fields)
-        cols_per_row = 2 
+        # EXPECTED_APP_FIELDS тут має бути словником {internal_key: text_key_for_display_name}
+        # Або просто передавати APP_INTERNAL_KEYS і отримувати display_name з texts
         
-        field_keys = list(expected_app_fields.keys())
-
-        for i in range(0, num_fields, cols_per_row):
-            cols = st.columns(cols_per_row)
-            for j in range(cols_per_row):
-                if i + j < num_fields:
-                    with cols[j]:
-                        internal_field = field_keys[i+j]
-                        # Отримуємо перекладену назву поля з `texts` або використовуємо `display_name` з `expected_app_fields`
-                        display_name_for_field = texts.get(expected_app_fields[internal_field], expected_app_fields[internal_field])
-                        
-                        # Відновлюємо попередній вибір користувача
-                        prev_selection = st.session_state.user_column_mapping.get(internal_field, '')
-                        current_index = 0
-                        if prev_selection and prev_selection in df_headers:
-                            current_index = (df_headers.index(prev_selection) + 1)
-                        
-                        selected_column = st.selectbox(
-                            f"{texts.get('select_csv_column_for', 'Select CSV column for')} '{display_name_for_field}':",
-                            options=[''] + df_headers, 
-                            index=current_index,
-                            key=f"map_ui_{internal_field}_v4" # Унікальні ключі
-                        )
-                        if selected_column: 
-                            temp_mapping[internal_field] = selected_column
+        cols = st.columns(2) 
+        col_idx = 0
+        # Використовуємо EXPECTED_APP_FIELDS з config_fields (який вже імпортовано в run_app.py)
+        # і передано сюди через texts або окремим аргументом. 
+        # Для простоти, припустимо, що `texts` вже містить перекладені назви полів.
+        for internal_field, display_name_key in EXPECTED_APP_FIELDS.items():
+            with cols[col_idx % 2]:
+                display_name_for_ui = texts.get(display_name_key, internal_field.replace("_", " ").title())
+                
+                prev_selection = st.session_state.user_column_mapping.get(internal_field, '')
+                current_index = 0
+                if prev_selection and prev_selection in df_headers:
+                    current_index = (df_headers.index(prev_selection) + 1)
+                
+                selected_column = st.selectbox(
+                    f"{texts.get('select_csv_column_for', 'Select CSV column for')} '{display_name_for_ui}':",
+                    options=[''] + df_headers, 
+                    index=current_index,
+                    key=f"map_ui_comp_{internal_field}_v5" 
+                )
+                if selected_column: 
+                    temp_mapping[internal_field] = selected_column
+            col_idx += 1
         
-        st.session_state.user_column_mapping = temp_mapping
-        user_column_mapping = temp_mapping
+        st.session_state.user_column_mapping = temp_mapping # Зберігаємо в session_state
+        user_column_mapping_result = temp_mapping
 
     except Exception as e:
-        st.error(f"{texts.get('error_csv_header_read', 'Помилка при читанні заголовків CSV')}: {e}")
+        st.error(f"{texts.get('error_csv_header_read', 'Error reading CSV headers')}: {e}")
         traceback.print_exc()
-        return None # Повертаємо None у разі помилки
+        return None 
         
-    return user_column_mapping
+    return user_column_mapping_result
+
+# Функція для побудови основного UI, яку можна буде викликати з run_app.py
+def build_main_input_section(texts: Dict[str, str]) -> Tuple[Optional[str], Optional[Any], Optional[str], Optional[Dict[str,str]]]:
+    """Будує секцію вводу даних та повертає зібрані значення."""
+    
+    data_source = st.radio(
+        texts["select_data_source"], 
+        [texts["google_sheet_id_option"], texts["csv_file_option"]], 
+        key="data_source_radio_ui",
+        horizontal=True
+    )
+    
+    sheet_id_val = None
+    csv_file_obj_val = None
+    column_mapping_val = None
+
+    if data_source == texts["google_sheet_id_option"]:
+        st.session_state.sheet_id_input = st.text_input(
+            texts["enter_google_sheet_id"], 
+            value=st.session_state.sheet_id_input, 
+            placeholder="Наприклад, 1abc2def3ghi_JKLMN...",
+            key="sheet_id_text_input_ui"
+        )
+        sheet_id_val = st.session_state.sheet_id_input.strip()
+        if any(st.session_state.user_column_mapping.values()):
+            st.session_state.user_column_mapping = {key: '' for key in EXPECTED_APP_FIELDS.keys()} # Використовуємо ключі з імпортованого EXPECTED_APP_FIELDS
+    else: # data_source == texts["csv_file_option"]
+        csv_file_obj_val = st.file_uploader(
+            texts["upload_csv_file"], 
+            type=["csv"], 
+            key=f"file_uploader_ui_{st.session_state.csv_file_uploader_key}" 
+        )
+        st.session_state.sheet_id_input = "" 
+        if csv_file_obj_val is not None:
+            column_mapping_val = display_csv_column_mapping_ui(texts, csv_file_obj_val)
+            if column_mapping_val is None: # Якщо помилка в мапуванні
+                csv_file_obj_val = None # Не обробляти цей файл
+
+    st.session_state.email_input = st.text_input(
+        texts["enter_client_email"], 
+        value=st.session_state.email_input,
+        placeholder="example@email.com",
+        key="email_text_input_ui"
+    )
+    email_val = st.session_state.email_input.strip()
+
+    return data_source, sheet_id_val, csv_file_obj_val, email_val, column_mapping_val
+

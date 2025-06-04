@@ -1,14 +1,10 @@
-## /workspaces/auto-report-generator/app/context_builder.py
+# /workspaces/auto-report-generator/app/context_builder.py
 import os
 from dotenv import load_dotenv
 import traceback
 
-# Імпортуємо APP_INTERNAL_KEYS
-try:
-    from .run_app import APP_INTERNAL_KEYS 
-except ImportError:
-    print("WARNING: [context_builder.py] Could not import APP_INTERNAL_KEYS from .run_app. Using a fallback list.")
-    APP_INTERNAL_KEYS = ["client_name", "task", "status", "date", "comments", "amount"] 
+# Імпортуємо APP_INTERNAL_KEYS з центрального конфігураційного файлу
+from .config_fields import APP_INTERNAL_KEYS
 
 try:
     from gpt_writer import generate_summary_data 
@@ -27,17 +23,15 @@ def build_context(record: dict) -> dict:
     print(f"INFO: [context_builder.py] Building context for record (first 3 keys from APP_INTERNAL_KEYS): { {k: record.get(k) for k in APP_INTERNAL_KEYS[:3]} }...")
 
     # Використовуємо APP_INTERNAL_KEYS для отримання значень
-    # Це робить код більш стійким до змін у порядку або наявності полів
-    client_name = record.get(APP_INTERNAL_KEYS[APP_INTERNAL_KEYS.index("client_name")], "Невідомо") if "client_name" in APP_INTERNAL_KEYS else "Невідомо"
-    task = record.get(APP_INTERNAL_KEYS[APP_INTERNAL_KEYS.index("task")], "-") if "task" in APP_INTERNAL_KEYS else "-"
-    status = record.get(APP_INTERNAL_KEYS[APP_INTERNAL_KEYS.index("status")], "-") if "status" in APP_INTERNAL_KEYS else "-"
-    date_val = record.get(APP_INTERNAL_KEYS[APP_INTERNAL_KEYS.index("date")], "-") if "date" in APP_INTERNAL_KEYS else "-"
-    comments = record.get(APP_INTERNAL_KEYS[APP_INTERNAL_KEYS.index("comments")], "") if "comments" in APP_INTERNAL_KEYS else ""
-    amount = record.get(APP_INTERNAL_KEYS[APP_INTERNAL_KEYS.index("amount")], 0) if "amount" in APP_INTERNAL_KEYS else 0
-
+    client_name = record.get(APP_INTERNAL_KEYS[0], "Невідомо") # client_name
+    task = record.get(APP_INTERNAL_KEYS[1], "-")         # task
+    status = record.get(APP_INTERNAL_KEYS[2], "-")       # status
+    date_val = record.get(APP_INTERNAL_KEYS[3], "-")     # date
+    comments = record.get(APP_INTERNAL_KEYS[4], "")    # comments
+    amount = record.get(APP_INTERNAL_KEYS[5], 0)       # amount
 
     summary_data_for_gemini = {
-        "Клієнт": client_name, # Ці ключі для промпту Gemini, можуть бути українською
+        "Клієнт": client_name, 
         "Завдання": task,
         "Статус": status,
         "Коментарі": comments,

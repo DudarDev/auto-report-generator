@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 import traceback
 
 # Імпортуємо APP_INTERNAL_KEYS з центрального конфігураційного файлу
-from .config_fields import APP_INTERNAL_KEYS
+from app.config_fields import APP_INTERNAL_KEYS # Змінено на абсолютний імпорт
 
 try:
     from gpt_writer import generate_summary_data 
@@ -12,23 +12,26 @@ except ImportError:
     print("ERROR: [context_builder.py] Failed to import generate_summary_data from gpt_writer.py.")
     def generate_summary_data(data_for_summary: dict) -> str:
         return "Помилка: Модуль gpt_writer не завантажено."
-
 load_dotenv() 
 
 def build_context(record: dict) -> dict:
+    # ... (код build_context() залишається таким, як я надавав раніше, 
+    #      переконайтеся, що він використовує імпортований APP_INTERNAL_KEYS 
+    #      для отримання значень з record, наприклад:
+    #      client_name = record.get(APP_INTERNAL_KEYS[0], "Невідомо") ) ...
+    # Ось повний код для context_builder.py з попереднього разу, з виправленим імпортом:
     if not isinstance(record, dict):
         print(f"ERROR: [context_builder.py] Expected a dictionary for 'record', but got {type(record)}")
         return {"title": "Помилка обробки запису", "client": "Н/Д", "task": "Н/Д", "status": "Н/Д", "summary": "Невірний формат запису", "comments": "", "date": "", "amount": 0}
 
     print(f"INFO: [context_builder.py] Building context for record (first 3 keys from APP_INTERNAL_KEYS): { {k: record.get(k) for k in APP_INTERNAL_KEYS[:3]} }...")
 
-    # Використовуємо APP_INTERNAL_KEYS для отримання значень
-    client_name = record.get(APP_INTERNAL_KEYS[0], "Невідомо") # client_name
-    task = record.get(APP_INTERNAL_KEYS[1], "-")         # task
-    status = record.get(APP_INTERNAL_KEYS[2], "-")       # status
-    date_val = record.get(APP_INTERNAL_KEYS[3], "-")     # date
-    comments = record.get(APP_INTERNAL_KEYS[4], "")    # comments
-    amount = record.get(APP_INTERNAL_KEYS[5], 0)       # amount
+    client_name = record.get(APP_INTERNAL_KEYS[APP_INTERNAL_KEYS.index("client_name")], "Невідомо") if "client_name" in APP_INTERNAL_KEYS else "Невідомо"
+    task = record.get(APP_INTERNAL_KEYS[APP_INTERNAL_KEYS.index("task")], "-") if "task" in APP_INTERNAL_KEYS else "-"
+    status = record.get(APP_INTERNAL_KEYS[APP_INTERNAL_KEYS.index("status")], "-") if "status" in APP_INTERNAL_KEYS else "-"
+    date_val = record.get(APP_INTERNAL_KEYS[APP_INTERNAL_KEYS.index("date")], "-") if "date" in APP_INTERNAL_KEYS else "-"
+    comments = record.get(APP_INTERNAL_KEYS[APP_INTERNAL_KEYS.index("comments")], "") if "comments" in APP_INTERNAL_KEYS else ""
+    amount = record.get(APP_INTERNAL_KEYS[APP_INTERNAL_KEYS.index("amount")], 0) if "amount" in APP_INTERNAL_KEYS else 0
 
     summary_data_for_gemini = {
         "Клієнт": client_name, 

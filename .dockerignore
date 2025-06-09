@@ -1,24 +1,55 @@
-# Секрети
+# Git та GitHub
+.git
+.gitignore
+.github/
+
+# Секрети та локальні конфігурації
 .env
-# ігноруй всі .json крім ключа для GCP
+.env.*
+*.env
+config/
 *.json
-!autoreportbot-5392a52edec4.json
+*.log
+autoreportbot-*.json
 
-
-# Python кеші
+# Кеші та артефакти Python
 __pycache__/
 *.pyc
 *.pyo
-*.log
+*.pyd
+*venv/
+*.venv/
+pip-wheel-metadata/
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
 
-# Репорти
-/reports/
+# Папки середовища та IDE
+.vscode/
+.idea/
+
+# Тимчасові файли та звіти, що не мають бути в образі
+.tmp/
+reports/
 *.zip
 
-# Git
-.git
-.gitignore
-
-# IDE/OS
-.DS_Store
-.vscode/
+# Інше
+Dockerfile
+.dockerignore
+Makefile
+README.md

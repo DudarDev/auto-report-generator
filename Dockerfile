@@ -47,4 +47,4 @@ EXPOSE 8080
 # --server.port $PORT: Вказівка Streamlit використовувати порт, наданий Cloud Run.
 # --server.address 0.0.0.0: Робить додаток доступним ззовні контейнера.
 # --server.enableCORS=false: Часто допомагає уникнути проблем з CORS у хмарних середовищах.
-CMD ["python", "-m", "streamlit", "run", "app/run_app.py", "--server.port", "$PORT", "--server.address", "0.0.0.0", "--server.enableCORS=false"]
+CMD python -m streamlit run app/run_app.py --server.port=$PORT --server.address=0.0.0.0 --server.enableCORS=false

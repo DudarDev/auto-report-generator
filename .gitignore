@@ -3,7 +3,7 @@
 credentials.json
 gmail_credentials.json
 
-# Кеші та тимчасові файли
+# Кеш та тимчасові файли
 __pycache__/
 *.pyc
 *.log
@@ -12,13 +12,20 @@ __pycache__/
 *.zip
 /reports/
 
-# Індивідуально, не глобально ігноруй json
+# Індивідуально, не глобально ігноруй .json
+# Це може бути специфічно для вашого проєкту, якщо ви хочете ігнорувати лише певні .json
+
+# Віртуальне середовище Python
+venv/   # <--- ДОДАЙТЕ ЦЕЙ РЯДОК!
+.venv/  # (можливо, також варто додати, якщо використовуєте .venv)
 
 /reports
-
 .tmp/
-
 google-cloud-sdk/
+google-cloud-cli-470.0.0-linux-x86_64.tar.gz
+google-cloud-cli-470.0.0-linux-x86_64.tar.gz
 
-google-cloud-cli-470.0.0-linux-x86_64.tar.gz
-google-cloud-cli-470.0.0-linux-x86_64.tar.gz
+# Інше
+Dockerfile
+Makefile
+README.md

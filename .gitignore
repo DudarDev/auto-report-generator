@@ -30,3 +30,5 @@ __pycache__/
 # Специфічно для ОС
 .DS_Store
 Thumbs.db
+
+google-cloud-sdk/

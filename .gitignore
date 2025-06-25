@@ -27,8 +27,8 @@ __pycache__/
 # Специфічно для VS Code
 .vscode/
 
-# Специфічно для ОС
-.DS_Store
-Thumbs.db
+/reports
+
+google-cloud-sdk/
 
 google-cloud-sdk/

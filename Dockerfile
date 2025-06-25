@@ -11,15 +11,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     libpango-1.0-0 \
     libpangocairo-1.0-0 \
-    libpangoft2-1.0-0 \
     libgdk-pixbuf2.0-0 \
     libffi-dev \
     curl \
-    fonts-dejavu \
-    # fonts-dejavu додає підтримку широкого набору символів, включаючи кирилицю.
-    && rm -rf /var/lib/apt/lists/*
+    && apt-get clean
 
-# Крок 3: Встановлюємо робочу директорію всередині контейнера
+# 🔹 Робоча директорія
 WORKDIR /app
 
 # Крок 4: Копіюємо файл залежностей та встановлюємо їх
@@ -31,20 +28,8 @@ COPY requirements.txt requirements.txt
 RUN pip install --no-cache-dir --upgrade pip
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Крок 5: Копіюємо решту коду додатку в контейнер
-COPY . .
+ENV GOOGLE_APPLICATION_CREDENTIALS="/app/config/autoreportbot-5392a52edec4.json"
 
-# Крок 6: Встановлюємо PYTHONPATH
-# Це важливо, щоб Python міг знаходити ваші модулі (наприклад, з папки 'app')
-ENV PYTHONPATH "${PYTHONPATH}:/app"
 
-# Крок 7: Вказуємо порт, який буде слухати додаток
-# Cloud Run за замовчуванням очікує порт 8080, але він також надає змінну $PORT.
-# Ми будемо використовувати $PORT у команді запуску.
-EXPOSE 8080
-
-# Крок 8: Команда для запуску Streamlit додатку при старті контейнера
-# --server.port $PORT: Вказівка Streamlit використовувати порт, наданий Cloud Run.
-# --server.address 0.0.0.0: Робить додаток доступним ззовні контейнера.
-# --server.enableCORS=false: Часто допомагає уникнути проблем з CORS у хмарних середовищах.
-CMD python -m streamlit run app/run_app.py --server.port=$PORT --server.address=0.0.0.0 --server.enableCORS=false
+# 🔹 Запуск Streamlit
+CMD ["streamlit", "run", "app/app.py", "--server.port=8080", "--server.address=0.0.0.0", "--server.enableCORS=false"]

@@ -1,39 +1,66 @@
+# /workspaces/auto-report-generator/run_app.py
+
 import streamlit as st
-from dotenv import load_dotenv
-import os
+import traceback
 
-from app.report_generator import generate_and_send_report  # ✅ Абсолютний імпорт
+# Імпортуємо наші модулі
+from app.ui_components import setup_page_config, language_selector, get_texts, display_main_ui
+from app.report_generator import generate_and_send_report
+from app.validation import validate_inputs
 
-load_dotenv()
+def initialize_session_state():
+    """Ініціалізує всі ключі session_state в одному місці."""
+    if 'lang_code' not in st.session_state:
+        st.session_state.lang_code = 'uk'
 
 def main():
-    st.set_page_config(page_title="AUTO-REPORT-GENERATOR", layout="centered")
-    st.title("📋 AUTO-REPORT-GENERATOR")
-    st.markdown("Згенеруйте звіт 🧾 і отримаєте його на email 📩")
+    """Головна функція запуску додатку."""
+    initialize_session_state()
+    
+    # 1. Мова та базові налаштування UI
+    language_selector()
+    texts = get_texts(st.session_state.lang_code)
+    setup_page_config(texts)
 
-    data_source = st.radio("Оберіть джерело даних:", ["Google Sheet ID", "CSV файл"])
-    sheet_id = None
-    csv_file = None
+    # 2. Відображення основного UI та отримання даних від користувача
+    (generate_pressed, 
+     data_source, 
+     sheet_id, 
+     csv_file, 
+     email, 
+     mapping) = display_main_ui(texts)
 
-    if data_source == "Google Sheet ID":
-        sheet_id = st.text_input("Введіть Google Sheet ID:")
-    else:
-        csv_file = st.file_uploader("Завантажте CSV файл", type=["csv"])
+    # 3. Головна логіка: запускається тільки при натисканні кнопки
+    if generate_pressed:
+        # 3.1 Валідація введених даних
+        is_valid, error_message = validate_inputs(texts, data_source, sheet_id, csv_file, email, mapping)
+        
+        if not is_valid:
+            st.warning(error_message)
+            return # Зупиняємо виконання, якщо дані невалідні
 
-    email = st.text_input("Введіть email клієнта:")
+        # 3.2 Основний процес генерації та відправки
+        try:
+            with st.spinner(texts.get("spinner_generating")):
+                # Викликаємо головну бізнес-логіку
+                success, message = generate_and_send_report(
+                    email_to=email,
+                    sheet_id=sheet_id,
+                    csv_file=csv_file,
+                    column_mapping=mapping
+                )
+            
+            # 3.3 Показ результату
+            if success:
+                st.success(f"{texts.get('success_report_sent')} {email}")
+                st.balloons()
+            else:
+                st.error(f"{texts.get('error_report_generation')} {message}")
 
-    if st.button("🚀 Згенерувати та надіслати звіт"):
-        if not email:
-            st.warning("Будь ласка, введіть email")
-        elif not sheet_id and not csv_file:
-            st.warning("Введіть Google Sheet ID або завантажте CSV")
-        else:
-            with st.spinner("Генеруємо звіт..."):
-                try:
-                    generate_and_send_report(email=email, sheet_id=sheet_id, csv_file=csv_file)
-                    st.success(f"✅ Звіт надіслано на {email}")
-                except Exception as e:
-                    st.error(f"❌ Помилка: {e}")
+        except Exception as e:
+            # Глобальний обробник непередбачуваних помилок
+            st.error(texts.get("error_report_generation"))
+            st.code(traceback.format_exc())
 
 if __name__ == "__main__":
     main()

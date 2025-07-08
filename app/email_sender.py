@@ -1,99 +1,120 @@
 # /workspaces/auto-report-generator/app/email_sender.py
+
 import os
-import smtplib
-import ssl
-from email.message import EmailMessage
+import base64
+import logging
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.mime.base import MIMEBase
+from email import encoders
+
+from google.auth.transport.requests import Request
+from google.oauth2.credentials import Credentials
+from google_auth_oauthlib.flow import InstalledAppFlow
+from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
 from dotenv import load_dotenv
-import traceback
 
+# --- Конфигурация ---
+# Настройка логирования для вывода информационных сообщений
+logging.basicConfig(level=logging.INFO, format='INFO: [%(filename)s] %(message)s')
+
+# Загружаем переменные окружения из .env файла
 load_dotenv()
-print(f"INFO: [email_sender.py] Module loaded. Attempted to load .env file.")
 
-def send_email(file_path: str, recipient: str = None) -> bool:
-    """Надсилає ZIP-файл на email та повертає True у разі успіху, False - у разі помилки."""
+# Определяем абсолютные пути к файлам, чтобы избежать ошибок
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+TMP_DIR = os.path.join(PROJECT_ROOT, '.tmp')
+CREDENTIALS_FILE = os.path.join(TMP_DIR, 'gcp_creds.json') # Файл с OAuth 2.0 Client ID
+TOKEN_FILE = os.path.join(TMP_DIR, 'token.json')          # Файл для хранения токена доступа
+
+# Определяем "области" доступа. Нам нужен доступ только к отправке писем.
+SCOPES = ["https://www.googleapis.com/auth/gmail.send"]
+
+# --- Основные функции ---
+
+def get_gmail_service():
+    """
+    Аутентифицирует пользователя через консоль и возвращает сервис для работы с Gmail API.
+    """
+    creds = None
+    # 1. Проверяем, есть ли у нас уже сохраненный и действительный токен
+    if os.path.exists(TOKEN_FILE):
+        creds = Credentials.from_authorized_user_file(TOKEN_FILE, SCOPES)
     
-    print(f"INFO: [email_sender.py] Preparing to send email with attachment: {file_path}")
+    # 2. Если токена нет или он недействителен, запускаем процесс аутентификации
+    if not creds or not creds.valid:
+        if creds and creds.expired and creds.refresh_token:
+            # Если токен просто просрочен, обновляем его
+            creds.refresh(Request())
+        else:
+            # Если токена нет совсем, запускаем полную аутентификацию
+            if not os.path.exists(CREDENTIALS_FILE):
+                logging.error(f"Файл учетных данных не найден: {CREDENTIALS_FILE}")
+                raise FileNotFoundError(f"Файл учетных данных не найден: {CREDENTIALS_FILE}")
 
-    email_subject = "Ваш автоматичний звіт"
-    email_from_user = os.getenv("EMAIL_USER")
-    email_to_address = recipient or os.getenv("EMAIL_TO_DEFAULT") or os.getenv("EMAIL_TO")
-    email_host = os.getenv("EMAIL_HOST")
-    email_port_str = os.getenv("EMAIL_PORT")
-    email_app_password = os.getenv("EMAIL_APP_PASSWORD")
-
-    print(f"  Attempting Send Details:")
-    print(f"    From: {email_from_user}")
-    print(f"    To: {email_to_address}")
-    print(f"    Subject: {email_subject}")
-    print(f"    Attachment path: {file_path}")
-    print(f"    SMTP Host: {email_host}")
-    print(f"    SMTP Port: {email_port_str}")
-    print(f"    SMTP User (for login): {email_from_user}")
-    print(f"    SMTP App Password: {'********' if email_app_password else 'NOT SET'}")
-
-    required_vars = {
-        "EMAIL_USER (for From & Login)": email_from_user,
-        "EMAIL_TO (effective)": email_to_address,
-        "EMAIL_HOST": email_host,
-        "EMAIL_PORT": email_port_str,
-        "EMAIL_APP_PASSWORD": email_app_password
-    }
-
-    missing_vars = [name for name, value in required_vars.items() if not value]
-    if missing_vars:
-        print(f"ERROR: [email_sender.py] Not all required email configuration variables are set: {', '.join(missing_vars)}")
-        for name, value in required_vars.items():
-             print(f"    {name}: {'Set' if value else 'NOT SET'}")
-        return False
-
-    try:
-        email_port = int(email_port_str)
-    except (ValueError, TypeError):
-        print(f"ERROR: [email_sender.py] Invalid EMAIL_PORT value: '{email_port_str}'. Must be an integer.")
-        return False
-
-    msg = EmailMessage()
-    msg["Subject"] = email_subject
-    msg["From"] = email_from_user
-    msg["To"] = email_to_address
-    msg.set_content(f"Шановний отримувач,\n\nУ вкладенні ваш автоматично згенерований звіт '{os.path.basename(file_path)}'.\n\nЗ найкращими побажаннями,\nВаш Автоматичний Генератор Звітів")
-
-    try:
-        with open(file_path, "rb") as f:
-            file_data = f.read()
-            file_name = os.path.basename(file_path)
-            msg.add_attachment(file_data, maintype="application", subtype="zip", filename=file_name)
-            print(f"INFO: [email_sender.py] Attached file: {file_name} ({len(file_data)} bytes)")
-    except FileNotFoundError:
-        print(f"ERROR: [email_sender.py] Attachment file not found: {file_path}")
-        return False
-    except Exception as e:
-        print(f"ERROR: [email_sender.py] Could not read or attach file '{file_path}': {e}")
-        traceback.print_exc()
-        return False
+            # Создаем поток аутентификации
+            flow = InstalledAppFlow.from_client_secrets_file(CREDENTIALS_FILE, SCOPES)
+            
+            # ВАЖНО: Используем консольный метод, который надежно работает в удаленных средах
+            creds = flow.run_console()
         
-    context = ssl.create_default_context()
-    try:
-        print(f"INFO: [email_sender.py] Attempting to connect to SMTP server: {email_host}:{email_port}")
-        with smtplib.SMTP_SSL(email_host, email_port, context=context) as smtp:
-            smtp.set_debuglevel(1)
-            print(f"INFO: [email_sender.py] Attempting to login to SMTP server as user: {email_from_user}")
-            smtp.login(email_from_user, email_app_password)
-            print("INFO: [email_sender.py] Logged in successfully. Attempting to send message...")
-            smtp.send_message(msg)
-            print(f"SUCCESS: [email_sender.py] Email successfully sent to {email_to_address}!")
-        return True
-    except smtplib.SMTPAuthenticationError as e:
-        print(f"ERROR: [email_sender.py] SMTP Authentication Error: {e}. Check EMAIL_USER and EMAIL_APP_PASSWORD.")
-        traceback.print_exc()
-        return False
-    except smtplib.SMTPException as e:
-        print(f"ERROR: [email_sender.py] SMTP Error: {e}")
-        traceback.print_exc()
-        return False
-    except Exception as e:
-        print(f"ERROR: [email_sender.py] Failed to send email due to an unexpected error: {e}")
-        traceback.print_exc()
-        return False
+        # 3. Сохраняем новый (или обновленный) токен для будущих запусков
+        with open(TOKEN_FILE, 'w') as token:
+            token.write(creds.to_json())
+            logging.info(f"Токен доступа сохранен в файл: {TOKEN_FILE}")
 
-# ... (ваш тестовий блок if __name__ == '__main__':, якщо потрібен) ...
+    # 4. Создаем и возвращаем готовый к работе объект сервиса
+    service = build('gmail', 'v1', credentials=creds)
+    logging.info("Сервис Gmail успешно инициализирован.")
+    return service
+
+
+def send_email(email_to: str, subject: str, body: str, attachment_path: str = None) -> tuple[bool, str | None]:
+    """
+    Формирует и отправляет email с вложением (или без) с использованием Gmail API.
+    
+    Возвращает:
+        (True, None) в случае успеха.
+        (False, error_message) в случае ошибки.
+    """
+    try:
+        service = get_gmail_service()
+        
+        # Создаем объект письма
+        message = MIMEMultipart()
+        message['to'] = email_to
+        message['from'] = 'me'  # 'me' - специальное значение, означает аутентифицированного пользователя
+        message['subject'] = subject
+        
+        # Добавляем текстовую часть письма
+        message.attach(MIMEText(body, 'plain'))
+        
+        # Если указан путь к вложению, добавляем его
+        if attachment_path and os.path.exists(attachment_path):
+            with open(attachment_path, "rb") as attachment_file:
+                part = MIMEBase('application', 'octet-stream')
+                part.set_payload(attachment_file.read())
+            encoders.encode_base64(part)
+            part.add_header(
+                'Content-Disposition',
+                f"attachment; filename= {os.path.basename(attachment_path)}",
+            )
+            message.attach(part)
+            logging.info(f"Вложение {os.path.basename(attachment_path)} добавлено к письму.")
+            
+        # Кодируем готовое письмо в нужный для API формат
+        raw_message = base64.urlsafe_b64encode(message.as_bytes()).decode()
+        create_message = {'raw': raw_message}
+        
+        # Отправляем сообщение через API
+        send_message = (service.users().messages().send(userId="me", body=create_message).execute())
+        logging.info(f"✅ Сообщение успешно отправлено. ID: {send_message['id']}")
+        return True, None
+
+    except HttpError as error:
+        logging.error(f'Произошла ошибка HTTP при отправке email: {error}')
+        return False, str(error)
+    except Exception as e:
+        logging.error(f'Неожиданная ошибка: {e}')
+        return False, str(e)

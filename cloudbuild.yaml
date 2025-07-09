@@ -1,0 +1,13 @@
+steps:
+  # Крок 1: Збираємо Docker-образ і тегаємо його для нашого нового репозиторію
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', 'europe-west1-docker.pkg.dev/autoreportbot/my-app-repo/auto-report-generator', '.']
+
+  # Крок 2: Завантажуємо цей образ у наш новий репозиторій my-app-repo
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'europe-west1-docker.pkg.dev/autoreportbot/my-app-repo/auto-report-generator']
+
+# Вказуємо, який саме образ потрібно розгорнути в Cloud Run після збірки
+images:
+  - 'europe-west1-docker.pkg.dev/autoreportbot/my-app-repo/auto-report-generator'
+  

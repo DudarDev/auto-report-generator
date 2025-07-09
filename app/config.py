@@ -8,37 +8,19 @@ from pathlib import Path
 # Встановлюємо базове логування
 logging.basicConfig(level=logging.INFO)
 
-# --- ЦЕ ЄДИНЕ МІСЦЕ, ДЕ ВІДБУВАЄТЬСЯ РОБОТА З .ENV ФАЙЛАМИ ---
+# --- РОБОТА З .ENV ФАЙЛАМИ ---
 
-# 1. Визначаємо поточне середовище (local, test), яке приходить з Makefile
+# 1. Визначаємо поточне середовище (наприклад, для локальної розробки)
 APP_ENV = os.getenv('APP_ENV', 'local')
 logging.info(f"✅ Запущено в середовищі: {APP_ENV}")
 
-# 2. Завантажуємо загальні секрети з .env.local
+# 2. Завантажуємо секрети з .env.local (це корисно для локального запуску)
 load_dotenv(dotenv_path=Path('.') / '.env.local')
-
-# 3. Динамічно обираємо назву файлу ключів
-key_filename = ""
-if APP_ENV == 'local':
-    key_filename = "gcp_service_account_main.json"
-elif APP_ENV == 'test':
-    key_filename = "gcp_service_account_for_test.json"
-
-# 4. Формуємо повний шлях до ключа і зберігаємо в Python-змінну
-GOOGLE_APPLICATION_CREDENTIALS = ""
-if key_filename:
-    key_path = Path('.') / '.tmp' / key_filename
-    if key_path.exists():
-        GOOGLE_APPLICATION_CREDENTIALS = str(key_path.resolve())
-        logging.info(f"🔑 Використовується ключ: {key_filename}")
-    else:
-        logging.error(f"🔴 ПОМИЛКА: Файл ключів не знайдено: {key_path}")
-else:
-    logging.warning(f"🟡 Увага: Для середовища '{APP_ENV}' ключ не визначено.")
 
 # --- З ЦЬОГО МОМЕНТУ ВСІ НАЛАШТУВАННЯ - ЦЕ ПРОСТО ЗМІННІ PYTHON ---
 
 # Завантажуємо решту змінних, які тепер доступні іншим модулям
+# При деплої на Cloud Run ці змінні будуть взяті з Secret Manager, а не з .env
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
 EMAIL_APP_PASSWORD = os.getenv('EMAIL_APP_PASSWORD')
 EMAIL_USER = os.getenv('EMAIL_USER')

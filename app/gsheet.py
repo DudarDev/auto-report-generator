@@ -1,62 +1,74 @@
-# /app/gsheet.py
-
+# /workspaces/auto-report-generator/app/gsheet.py
 import gspread
 import pandas as pd
 import logging
-from typing import List, Dict, Optional, Any
+from typing import Optional, List, Dict, Any
 
-# --- ІМПОРТУЄМО ГОТОВІ НАЛАШТУВАННЯ З НАШОГО "МОЗКУ" ---
-from app import config
+# Налаштовуємо логування
+logging.basicConfig(level=logging.INFO)
 
-def init_gsheet() -> gspread.Client:
-    """Ініціалізує клієнт gspread, використовуючи ГОТОВІ налаштування з config."""
-    logging.info("Ініціалізація gspread клієнта...")
+# Глобальний клієнт, щоб не ініціалізувати його щоразу
+_gspread_client = None
 
-    # ВИКОРИСТОВУЄМО ЗМІННУ НАПРЯМУ З КОНФІГУРАЦІЇ
-    creds_path = config.GOOGLE_APPLICATION_CREDENTIALS
-    
-    if not creds_path:
-        error_msg = "Шлях до GOOGLE_APPLICATION_CREDENTIALS не встановлено у config.py."
-        logging.error(error_msg)
-        raise ValueError(error_msg)
-    
-    gc = gspread.service_account(filename=creds_path)
-    logging.info("Клієнт gspread успішно ініціалізовано.")
-    return gc
+def _get_gspread_client() -> Optional[gspread.Client]:
+    """
+    Ініціалізує та повертає клієнт gspread.
+    Використовує автоматичну автентифікацію Application Default Credentials.
+    """
+    global _gspread_client
+    if _gspread_client is None:
+        try:
+            logging.info("Ініціалізація gspread клієнта...")
+            # Ця команда автоматично знайде доступи в середовищі Cloud Run
+            _gspread_client = gspread.service_account()
+            logging.info("Клієнт gspread успішно ініціалізовано.")
+        except Exception as e:
+            logging.error(f"Не вдалося ініціалізувати gspread клієнт: {e}")
+            return None
+    return _gspread_client
 
-def get_sheet_headers(sheet_id: str) -> List[str]:
-    """Ефективно завантажує лише заголовок з Google-таблиці."""
-    client = init_gsheet()
-    sheet = client.open_by_key(sheet_id).sheet1
-    return sheet.row_values(1)
+def get_sheet_data(sheet_id: str,
+                   csv_file: Optional[Any] = None,
+                   column_mapping: Optional[Dict[str, str]] = None) -> Optional[List[Dict]]:
+    """
+    Отримує дані з Google Sheet або CSV-файлу.
+    """
+    try:
+        # Логіка для CSV
+        if csv_file is not None:
+            logging.info(f"Обробка завантаженого CSV-файлу: {csv_file.name}")
+            df = pd.read_csv(csv_file)
+            # Перейменовуємо колонки, якщо є мапінг
+            if column_mapping:
+                df = df.rename(columns=column_mapping)
+            return df.to_dict('records')
 
-def get_sheet_data(
-    sheet_id: Optional[str] = None, 
-    csv_file: Optional[Any] = None, 
-    column_mapping: Optional[Dict[str, str]] = None
-) -> Optional[List[Dict]]:
-    """Отримує та нормалізує дані з Google Sheets або CSV файлу."""
-    if sheet_id:
-        client = init_gsheet()
-        sheet = client.open_by_key(sheet_id).sheet1
-        data_from_sheet = sheet.get_all_records()
-        return _normalize_data(data_from_sheet, config.APP_INTERNAL_KEYS, column_mapping)
-    elif csv_file:
-        df = pd.read_csv(csv_file)
-        data_from_csv = df.to_dict('records')
-        return _normalize_data(data_from_csv, config.APP_INTERNAL_KEYS, column_mapping)
-    return None
+        # Логіка для Google Sheets
+        elif sheet_id:
+            gc = _get_gspread_client()
+            if not gc:
+                return None  # Помилка ініціалізації клієнта
 
-def _normalize_data(
-    data_list: List[Dict], 
-    expected_keys: List[str], 
-    column_mapping: Optional[Dict[str, str]] = None
-) -> List[Dict]:
-    """Приводить дані до єдиного формату."""
-    if not column_mapping:
-        return []
-    normalized_list = []
-    for record in data_list:
-        new_record = {key: record.get(column_mapping.get(key)) for key in expected_keys}
-        normalized_list.append(new_record)
-    return normalized_list
+            spreadsheet = gc.open_by_key(sheet_id)
+            worksheet = spreadsheet.sheet1
+            data = worksheet.get_all_records()
+            
+            # Якщо є мапінг, перейменовуємо ключі в словниках
+            if column_mapping:
+                renamed_data = []
+                for row in data:
+                    new_row = {column_mapping.get(k, k): v for k, v in row.items()}
+                    renamed_data.append(new_row)
+                data = renamed_data
+                
+            return data
+        else:
+            logging.error("Не надано ані sheet_id, ані csv_file.")
+            return None
+
+    except gspread.exceptions.SpreadsheetNotFound:
+        logging.error(f"Таблицю з ID '{sheet_id}' не знайдено.")
+        return None
+    except Exception as e:
+        logging.error(f"Сталася помилка при отриманні даних: {e}", exc_info=True)
+        return None

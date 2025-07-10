@@ -1,13 +1,30 @@
 steps:
   # Крок 1: Збираємо Docker-образ і тегаємо його для нашого нового репозиторію
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['build', '-t', 'europe-west1-docker.pkg.dev/autoreportbot/my-app-repo/auto-report-generator', '.']
+    args: ['build', '-t', 'europe-west1-docker.pkg.dev/autoreportbot/my-app-repo/auto-report-generator:latest', '.']
 
-  # Крок 2: Завантажуємо цей образ у наш новий репозиторій my-app-repo
+  # Крок 2: Завантажуємо цей образ у наш репозиторій my-app-repo
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['push', 'europe-west1-docker.pkg.dev/autoreportbot/my-app-repo/auto-report-generator']
+    args: ['push', 'europe-west1-docker.pkg.dev/autoreportbot/my-app-repo/auto-report-generator:latest']
 
-# Вказуємо, який саме образ потрібно розгорнути в Cloud Run після збірки
+  # Крок 3: Розгортаємо щойно створений образ на Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - 'auto-report-generator'
+      - '--image=europe-west1-docker.pkg.dev/autoreportbot/my-app-repo/auto-report-generator:latest'
+      - '--region=europe-west1'
+      - '--project=autoreportbot'
+      - '--quiet'
+      - '--set-secrets=GMAIL_TOKEN_JSON=GMAIL_TOKEN_JSON:latest,GMAIL_CREDENTIALS_JSON=GMAIL_CREDENTIALS_JSON:latest,GEMINI_API_KEY=GEMINI_API_KEY:latest'
+
+# Вказуємо, який образ вважати фінальним артефактом збірки
 images:
-  - 'europe-west1-docker.pkg.dev/autoreportbot/my-app-repo/auto-report-generator'
-  
+  - 'europe-west1-docker.pkg.dev/autoreportbot/my-app-repo/auto-report-generator:latest'
+
+# ВАЖЛИВО: Явно вказуємо, куди зберігати логи
+logsBucket: 'gs://autoreportbot-build-logs'
+options:
+  logging: GCS_ONLY

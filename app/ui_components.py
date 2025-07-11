@@ -8,8 +8,9 @@ from pathlib import Path
 from typing import Dict, Any, Tuple, Optional, List
 
 # --- КОНФІГУРАЦІЯ ТА ІМПОРТИ ---
-# Імпортуємо все з єдиного файлу конфігурації app.config
 from app.config import EXPECTED_APP_FIELDS, SUPPORTED_LANGUAGES
+# ВИПРАВЛЕНО: Імпортуємо обидві функції з gsheet
+from app.gsheet import get_sheet_data, get_sheet_headers
 
 # --- КОНСТАНТИ ---
 TEXTS_DIR = Path(__file__).parent.parent / "texts"
@@ -46,7 +47,6 @@ def language_selector():
         st.session_state.lang_code = SUPPORTED_LANGUAGES[st.session_state.lang_widget]
     
     display_options = list(SUPPORTED_LANGUAGES.keys())
-    # Знаходимо ключ (назву мови) за поточним кодом мови
     current_lang_display = next((lang for lang, code in SUPPORTED_LANGUAGES.items() if code == st.session_state.get('lang_code', DEFAULT_LANG)), display_options[0])
     current_index = display_options.index(current_lang_display)
 
@@ -76,7 +76,6 @@ def display_main_ui(texts: dict) -> Tuple:
     sheet_id, csv_file, column_mapping = None, None, {}
     headers = []
 
-    # Визначаємо, яке джерело обрано
     is_google_sheets = (data_source == texts.get("google_sheet_option"))
     is_csv = (data_source == texts.get("csv_file_option"))
 
@@ -88,7 +87,7 @@ def display_main_ui(texts: dict) -> Tuple:
         if sheet_id:
             try:
                 with st.spinner(texts.get("spinner_get_headers", "Отримання стовпців...")):
-                    # ВИКОРИСТОВУЄМО НОВУ ЕФЕКТИВНУ ФУНКЦІЮ
+                    # ВИКЛИК ПРАВИЛЬНОЇ ФУНКЦІЇ
                     headers = get_sheet_headers(sheet_id=sheet_id)
             except Exception as e:
                 st.warning(f"{texts.get('error_google_sheet_data', 'Не вдалося отримати заголовки')}: {e}")
@@ -101,7 +100,6 @@ def display_main_ui(texts: dict) -> Tuple:
             except Exception as e:
                 st.error(f"{texts.get('error_csv_header_read', 'Не вдалося прочитати заголовки CSV')}: {e}")
 
-    # Відображаємо UI для зіставлення, якщо вдалося отримати заголовки
     if headers:
         column_mapping = _display_mapping_ui(texts, headers)
 
@@ -109,7 +107,6 @@ def display_main_ui(texts: dict) -> Tuple:
         label=texts.get("enter_client_email", "Email для відправки звіту:"), 
     )
     
-    # Кнопка стає активною тільки якщо є джерело даних і вказано email
     is_ready = bool((sheet_id or csv_file) and email)
     generate_button_pressed = st.button(
         texts.get("generate_button", "Сгенерувати та надіслати звіт"),
@@ -127,11 +124,9 @@ def _display_mapping_ui(texts: dict, headers: List[str]) -> Dict[str, Optional[s
         st.caption(texts.get("mapping_caption", "Вкажіть, який стовпець відповідає кожному полю звіту."))
         
         cols = st.columns(2)
-        # Динамічно створюємо селектори на основі полів з app.config
         for i, (internal_key, text_key) in enumerate(EXPECTED_APP_FIELDS.items()):
             with cols[i % 2]:
                 display_name = texts.get(text_key, internal_key.replace('_', ' ').title())
-                # Додаємо порожній варіант, щоб можна було не обирати нічого
                 options = [""] + headers 
                 selected_col = st.selectbox(
                     label=f"{display_name}:",

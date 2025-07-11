@@ -49,7 +49,7 @@ def generate_summary_data(data_for_summary: dict) -> str:
             return "Помилка: Не вдалося ініціалізувати модель Gemini."
 
     try:
-        prompt_parts = [f"{key}: {value}" for key, value in data_for_summary.items() if value and str(v).strip() and str(v) != "-"]
+        prompt_parts = [f"{key}: {value}" for key, value in data_for_summary.items() if value and str(value).strip() and str(value) != "-"]
         if not prompt_parts:
             return "Немає даних для генерації резюме."
 

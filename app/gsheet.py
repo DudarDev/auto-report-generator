@@ -4,27 +4,39 @@ import pandas as pd
 import logging
 from typing import Optional, List, Dict, Any
 
+# ІМПОРТУЄМО БІБЛІОТЕКУ GOOGLE-AUTH
+import google.auth
+from google.auth.transport.requests import Request
+
 logging.basicConfig(level=logging.INFO)
 
 _gspread_client = None
 
 def _get_gspread_client() -> Optional[gspread.Client]:
-    """Ініціалізує та повертає клієнт gspread."""
+    """
+    Ініціалізує gspread, використовуючи Application Default Credentials (ADC).
+    Це найнадійніший спосіб для роботи в Google Cloud.
+    """
     global _gspread_client
     if _gspread_client is None:
         try:
-            logging.info("Ініціалізація gspread клієнта...")
-            _gspread_client = gspread.service_account()
+            logging.info("Ініціалізація gspread клієнта через google-auth...")
+            
+            # Явно отримуємо облікові дані з середовища (це і є сервісний акаунт)
+            creds, project = google.auth.default(
+                scopes=['https://www.googleapis.com/auth/spreadsheets.readonly']
+            )
+            # Явно передаємо ці облікові дані в gspread
+            _gspread_client = gspread.Client(auth=creds)
+            
             logging.info("Клієнт gspread успішно ініціалізовано.")
         except Exception as e:
-            logging.error(f"Не вдалося ініціалізувати gspread клієнт: {e}")
+            logging.error(f"Не вдалося ініціалізувати gspread клієнт: {e}", exc_info=True)
             return None
     return _gspread_client
 
+# Решта функцій залишається без змін...
 def get_sheet_headers(sheet_id: str) -> List[str]:
-    """
-    Отримує тільки заголовки (перший рядок) з Google Sheet.
-    """
     try:
         gc = _get_gspread_client()
         if not gc:
@@ -32,17 +44,15 @@ def get_sheet_headers(sheet_id: str) -> List[str]:
         
         spreadsheet = gc.open_by_key(sheet_id)
         worksheet = spreadsheet.sheet1
-        headers = worksheet.row_values(1) # Ефективно читаємо тільки перший рядок
+        headers = worksheet.row_values(1)
         return headers
     except Exception as e:
         logging.error(f"Не вдалося отримати заголовки з таблиці ID '{sheet_id}': {e}")
-        # Повертаємо виключення, щоб UI міг його обробити
         raise e
 
 def get_sheet_data(sheet_id: str,
                    csv_file: Optional[Any] = None,
                    column_mapping: Optional[Dict[str, str]] = None) -> Optional[List[Dict]]:
-    """Отримує дані з Google Sheet або CSV-файлу."""
     try:
         if csv_file is not None:
             df = pd.read_csv(csv_file)
@@ -70,4 +80,4 @@ def get_sheet_data(sheet_id: str,
             return None
     except Exception as e:
         logging.error(f"Сталася помилка при отриманні даних: {e}", exc_info=True)
-        return None
+        return Nonegit add app/gsheet.py

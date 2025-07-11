@@ -29,7 +29,6 @@ def _initialize_gemini_model():
         # ВИПРАВЛЕНО: Передаємо credentials в GenerativeModel, а не в configure
         _model = genai.GenerativeModel(
             model_name,
-            transport='rest',
             client_options={'credentials': creds}
         )
 

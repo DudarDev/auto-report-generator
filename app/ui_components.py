@@ -10,8 +10,6 @@ from typing import Dict, Any, Tuple, Optional, List
 # --- КОНФІГУРАЦІЯ ТА ІМПОРТИ ---
 # Імпортуємо все з єдиного файлу конфігурації app.config
 from app.config import EXPECTED_APP_FIELDS, SUPPORTED_LANGUAGES
-# Імпортуємо нову функцію для отримання лише заголовків
-from app.gsheet import get_sheet_headers
 
 # --- КОНСТАНТИ ---
 TEXTS_DIR = Path(__file__).parent.parent / "texts"

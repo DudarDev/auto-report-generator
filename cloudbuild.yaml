@@ -1,13 +1,21 @@
 steps:
-  # Крок 1: Збираємо Docker-образ і тегаємо його для нашого нового репозиторію
+  # КРОК 0: Явна автентифікація за допомогою ключа з Secret Manager
+  # Цей крок вирішує всі проблеми з дозволами
+  - name: 'gcr.io/cloud-builders/gcloud'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - 'gcloud secrets versions access latest --secret="REPORT_BOT_KEY" > /workspace/report-bot-key.json && gcloud auth activate-service-account report-bot@autoreportbot.iam.gserviceaccount.com --key-file=/workspace/report-bot-key.json'
+
+  # Крок 1: Збираємо Docker-образ
   - name: 'gcr.io/cloud-builders/docker'
     args: ['build', '-t', 'europe-west1-docker.pkg.dev/autoreportbot/my-app-repo/auto-report-generator:latest', '.']
 
-  # Крок 2: Завантажуємо цей образ у наш репозиторій my-app-repo
+  # Крок 2: Завантажуємо образ у наш репозиторій
   - name: 'gcr.io/cloud-builders/docker'
     args: ['push', 'europe-west1-docker.pkg.dev/autoreportbot/my-app-repo/auto-report-generator:latest']
 
-  # Крок 3: Розгортаємо щойно створений образ на Cloud Run
+  # Крок 3: Розгортаємо образ на Cloud Run
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: gcloud
     args:
@@ -24,7 +32,7 @@ steps:
 images:
   - 'europe-west1-docker.pkg.dev/autoreportbot/my-app-repo/auto-report-generator:latest'
 
-# ВАЖЛИВО: Явно вказуємо, куди зберігати логи
+# Вказуємо, куди зберігати логи
 logsBucket: 'gs://autoreportbot-build-logs'
 options:
   logging: GCS_ONLY

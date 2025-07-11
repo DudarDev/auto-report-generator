@@ -1,4 +1,4 @@
-# Git та GitHub
+# Файли системи контролю версій
 .git
 .gitignore
 .github/
@@ -7,49 +7,25 @@
 .env
 .env.*
 *.env
-config/
-*.json
-*.log
+# Секретні файли JSON (додайте інші, якщо є)
+credentials.json
+token.json
+gcp_*.json
 autoreportbot-*.json
 
-# Кеші та артефакти Python
+# Віртуальне середовище та кеш Python
+venv/
+.venv/
 __pycache__/
 *.pyc
-*.pyo
-*.pyd
-*venv/
-*.venv/
-pip-wheel-metadata/
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-share/python-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
 
-# Папки середовища та IDE
+# Конфігурація IDE
 .vscode/
 .idea/
 
-# Тимчасові файли та звіти, що не мають бути в образі
+# Тимчасові файли та згенеровані артефакти, які не потрібні в образі
 .tmp/
 reports/
+screenshots/
 *.zip
-
-# Інше
-Dockerfile
-.dockerignore
-Makefile
-README.md
+*.log

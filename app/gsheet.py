@@ -80,4 +80,4 @@ def get_sheet_data(sheet_id: str,
             return None
     except Exception as e:
         logging.error(f"Сталася помилка при отриманні даних: {e}", exc_info=True)
-        return Nonegit add app/gsheet.py
+        return None

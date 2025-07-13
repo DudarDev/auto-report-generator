@@ -2,43 +2,53 @@
 import os
 import traceback
 import logging
-import google.generativeai as genai
+import google.auth
 from dotenv import load_dotenv
+
+# ВИКОРИСТОВУЄМО БІБЛІОТЕКУ VERTEX AI
+import vertexai
+from vertexai.generative_models import GenerativeModel
 
 load_dotenv()
 
-_model = None
+_model_initialized = False
 
 def _initialize_gemini_model():
     """
-    Ініціалізує модель Gemini, дозволяючи їй автоматично знайти
-    доступи сервісного акаунту в середовищі Google Cloud.
+    Ініціалізує модель Gemini через Vertex AI, використовуючи явну
+    автентифікацію сервісного акаунту.
     """
-    global _model
+    global _model_initialized
     
     try:
-        logging.info("Ініціалізація Gemini моделі (автоматичний режим)...")
-        model_name = os.getenv("GEMINI_MODEL_NAME", 'models/gemini-1.5-pro-latest')
+        logging.info("Ініціалізація Gemini моделі через Vertex AI...")
         
-        # ВИПРАВЛЕНО: Просто створюємо модель.
-        # Бібліотека сама знайде доступи сервісного акаунту на Cloud Run.
-        _model = genai.GenerativeModel(model_name)
+        # 1. Отримуємо облікові дані з середовища (так само, як для gsheet)
+        creds, project_id = google.auth.default()
+
+        # 2. Ініціалізуємо клієнт Vertex AI
+        vertexai.init(project=project_id, credentials=creds, location="europe-west1")
         
-        logging.info(f"SUCCESS: Gemini модель '{model_name}' успішно ініціалізовано.")
+        _model_initialized = True
+        logging.info("SUCCESS: Клієнт Vertex AI успішно ініціалізовано.")
         return True
+
     except Exception as e:
-        logging.error(f"ERROR: Не вдалося ініціалізувати Gemini модель: {e}", exc_info=True)
+        logging.error(f"ERROR: Не вдалося ініціалізувати Vertex AI: {e}", exc_info=True)
         return False
 
 def generate_summary_data(data_for_summary: dict) -> str:
     """ Генерує короткий аналітичний звіт. """
-    global _model
+    global _model_initialized
     
-    if _model is None:
+    if not _model_initialized:
         if not _initialize_gemini_model():
             return "Помилка: Не вдалося ініціалізувати модель Gemini."
 
     try:
+        model_name = os.getenv("GEMINI_MODEL_NAME", "gemini-1.5-pro-001")
+        model = GenerativeModel.from_pretrained(model_name)
+        
         prompt_parts = [f"{key}: {value}" for key, value in data_for_summary.items() if value and str(value).strip() and str(value) != "-"]
         if not prompt_parts:
             return "Немає даних для генерації резюме."
@@ -47,7 +57,7 @@ def generate_summary_data(data_for_summary: dict) -> str:
         prompt = f"Склади короткий аналітичний висновок українською мовою на основі таких даних: {prompt_input_str}."
         
         logging.info(f"INFO: Генерація висновку з промптом: '{prompt[:100]}...'")
-        response = _model.generate_content(prompt)
+        response = model.generate_content(prompt)
         
         return response.text
     except Exception as e:

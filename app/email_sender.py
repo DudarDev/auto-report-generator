@@ -25,7 +25,7 @@ load_dotenv()
 # Определяем абсолютные пути к файлам, чтобы избежать ошибок
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 TMP_DIR = os.path.join(PROJECT_ROOT, '.tmp')
-CREDENTIALS_FILE = os.path.join(TMP_DIR, 'gcp_creds.json') # Файл с OAuth 2.0 Client ID
+CREDENTIALS_FILE = os.path.join(TMP_DIR, 'credentials.json') # Файл с OAuth 2.0 Client ID
 TOKEN_FILE = os.path.join(TMP_DIR, 'token.json')          # Файл для хранения токена доступа
 
 # Определяем "области" доступа. Нам нужен доступ только к отправке писем.

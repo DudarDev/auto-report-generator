@@ -6,7 +6,6 @@ import google.generativeai as genai
 from dotenv import load_dotenv
 
 load_dotenv()
-
 _model = None
 
 def _initialize_gemini_model():
@@ -25,18 +24,13 @@ def _initialize_gemini_model():
 def generate_summary_data(data_for_summary: dict) -> str:
     """Генерує короткий аналітичний звіт."""
     global _model
-    if not _model:
-        if not _initialize_gemini_model():
-            return "Помилка: Не вдалося ініціалізувати модель Gemini."
+    if not _model and not _initialize_gemini_model():
+        return "Помилка: Не вдалося ініціалізувати модель Gemini."
     try:
         prompt_parts = [f"{key}: {value}" for key, value in data_for_summary.items() if value and str(value).strip() and str(value) != "-"]
-        if not prompt_parts:
-            return "Немає даних для генерації резюме."
-        prompt_input_str = "; ".join(prompt_parts)
-        prompt = f"Склади короткий аналітичний висновок українською мовою на основі таких даних: {prompt_input_str}."
-        logging.info(f"INFO: Генерація висновку з промптом: '{prompt[:100]}...'")
-        response = model.generate_content(prompt)
-        return response.text
+        if not prompt_parts: return "Немає даних для генерації резюме."
+        prompt = f"Склади короткий аналітичний висновок українською мовою: {'; '.join(prompt_parts)}."
+        return _model.generate_content(prompt).text
     except Exception as e:
-        logging.error(f"ERROR: Помилка під час генерації висновку: {e}", exc_info=True)
+        logging.error(f"Помилка під час генерації висновку: {e}", exc_info=True)
         return f"Помилка під час генерації висновку: {e}"

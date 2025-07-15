@@ -3,10 +3,10 @@
 import streamlit as st
 import traceback
 
-# Імпортуємо наші модулі
-from app.ui_components import setup_page_config, language_selector, get_texts, display_main_ui
-from app.report_generator import generate_and_send_report
-from app.validation import validate_inputs
+# ИЗМЕНЕНО: используем относительный импорт
+from .ui_components import setup_page_config, language_selector, get_texts, display_main_ui
+from .report_generator import generate_and_send_report
+from .validation import validate_inputs
 
 def initialize_session_state():
     """Ініціалізує всі ключі session_state в одному місці."""
@@ -23,7 +23,6 @@ def main():
     setup_page_config(texts)
 
     # 2. Відображення основного UI та отримання даних від користувача
-    # ВИПРАВЛЕНО: прибрали 'data_source', очікуємо 5 значень
     (generate_pressed, 
      sheet_id, 
      csv_file, 
@@ -33,7 +32,6 @@ def main():
     # 3. Головна логіка: запускається тільки при натисканні кнопки
     if generate_pressed:
         # 3.1 Валідація введених даних
-        # ВИПРАВЛЕНО: більше не передаємо 'data_source'
         is_valid, error_message = validate_inputs(texts, sheet_id, csv_file, email, mapping)
         
         if not is_valid:
@@ -44,7 +42,6 @@ def main():
         try:
             with st.spinner(texts.get("spinner_generating", "Генерація звітів...")):
                 # Викликаємо головну бізнес-логіку
-                # ВИПРАВЛЕНО: використовуємо 'email' замість 'email_to' для узгодженості
                 success, message = generate_and_send_report(
                     email=email,
                     sheet_id=sheet_id,

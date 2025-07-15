@@ -1,15 +1,24 @@
+# Google & AI
 google-auth
+google-auth-oauthlib>=1.0.0
 google-generativeai
+google-cloud-aiplatform
 gspread
-jinja2
-python-dotenv
-streamlit
-weasyprint
-pandas
-openai
 oauth2client
+openai
+
+# Web & UI
+streamlit
+jinja2
+
+# Data & Reporting
+pandas
+weasyprint
+
+# Utilities
+python-dotenv
+
+# Development & Testing
 pytest
 flake8
 black
-google-auth-oauthlib>=1.0.0
-google-cloud-aiplatform

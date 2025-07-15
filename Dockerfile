@@ -27,4 +27,5 @@ COPY . .
 ENV PYTHONPATH=/app
 
 # Запускаємо Streamlit на правильному порті
-CMD streamlit run app/run_app.py --server.port $PORT --server.enableCORS false --server.enableXsrfProtection false
+# Новий, правильний варіант:
+CMD ["python", "-m", "streamlit", "run", "app", "--server.port", "$PORT", "--server.enableCORS", "false", "--server.enableXsrfProtection", "false"]

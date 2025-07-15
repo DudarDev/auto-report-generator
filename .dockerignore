@@ -29,3 +29,5 @@ reports/
 screenshots/
 *.zip
 *.log
+
+.venv/  # Віртуальне середовище Python

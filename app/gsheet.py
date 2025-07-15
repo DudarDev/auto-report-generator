@@ -4,39 +4,25 @@ import pandas as pd
 import logging
 from typing import Optional, List, Dict, Any
 
-# ІМПОРТУЄМО БІБЛІОТЕКУ GOOGLE-AUTH
-import google.auth
-from google.auth.transport.requests import Request
-
 logging.basicConfig(level=logging.INFO)
 
 _gspread_client = None
 
 def _get_gspread_client() -> Optional[gspread.Client]:
-    """
-    Ініціалізує gspread, використовуючи Application Default Credentials (ADC).
-    Це найнадійніший спосіб для роботи в Google Cloud.
-    """
+    """Ініціалізує gspread, використовуючи автентифікацію, що надається середовищем."""
     global _gspread_client
     if _gspread_client is None:
         try:
-            logging.info("Ініціалізація gspread клієнта через google-auth...")
-            
-            # Явно отримуємо облікові дані з середовища (це і є сервісний акаунт)
-            creds, project = google.auth.default(
-                scopes=['https://www.googleapis.com/auth/spreadsheets.readonly']
-            )
-            # Явно передаємо ці облікові дані в gspread
-            _gspread_client = gspread.Client(auth=creds)
-            
+            logging.info("Ініціалізація gspread клієнта (автоматичний режим)...")
+            _gspread_client = gspread.service_account()
             logging.info("Клієнт gspread успішно ініціалізовано.")
         except Exception as e:
             logging.error(f"Не вдалося ініціалізувати gspread клієнт: {e}", exc_info=True)
             return None
     return _gspread_client
 
-# Решта функцій залишається без змін...
 def get_sheet_headers(sheet_id: str) -> List[str]:
+    """Отримує тільки заголовки (перший рядок) з Google Sheet."""
     try:
         gc = _get_gspread_client()
         if not gc:
@@ -59,16 +45,12 @@ def get_sheet_data(sheet_id: str,
             if column_mapping:
                 df = df.rename(columns=column_mapping)
             return df.to_dict('records')
-
         elif sheet_id:
             gc = _get_gspread_client()
-            if not gc:
-                return None
-
+            if not gc: return None
             spreadsheet = gc.open_by_key(sheet_id)
             worksheet = spreadsheet.sheet1
             data = worksheet.get_all_records()
-            
             if column_mapping:
                 renamed_data = []
                 for row in data:
@@ -76,8 +58,7 @@ def get_sheet_data(sheet_id: str,
                     renamed_data.append(new_row)
                 data = renamed_data
             return data
-        else:
-            return None
+        return None
     except Exception as e:
         logging.error(f"Сталася помилка при отриманні даних: {e}", exc_info=True)
         return None

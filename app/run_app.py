@@ -4,7 +4,7 @@ import streamlit as st
 import traceback
 
 # ИЗМЕНЕНО: используем относительный импорт
-from .ui_components import setup_page_config, language_selector, get_texts, display_main_ui
+from app.ui_components import setup_page_config, language_selector, get_texts
 from .report_generator import generate_and_send_report
 from .validation import validate_inputs
 

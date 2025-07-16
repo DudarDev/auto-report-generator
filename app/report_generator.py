@@ -5,11 +5,11 @@ from dotenv import load_dotenv
 from typing import Optional, List, Dict, Any, Tuple
 import traceback
 
-from .gsheet import get_sheet_data
-from .pdf_generator import generate_pdf
-from .email_sender import send_email
-from .zipper import zip_reports
-from .context_builder import build_context
+from app.gsheet import get_sheet_data
+from app.pdf_generator import generate_pdf
+from app.email_sender import send_email
+from app.zipper import zip_reports
+from app.context_builder import build_context
 
 load_dotenv()
 print(f"INFO: [report_generator.py] Module loaded. Attempted to load .env file.")

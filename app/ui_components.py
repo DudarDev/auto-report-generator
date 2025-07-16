@@ -8,9 +8,9 @@ from pathlib import Path
 from typing import Dict, Any, Tuple, Optional, List
 
 # --- КОНФІГУРАЦІЯ ТА ІМПОРТИ ---
-from .config import EXPECTED_APP_FIELDS, SUPPORTED_LANGUAGES
+from app.config import EXPECTED_APP_FIELDS, SUPPORTED_LANGUAGES
 # ВИПРАВЛЕНО: Імпортуємо обидві функції з gsheet
-from .gsheet import get_sheet_data, get_sheet_headers
+from app.gsheet import get_sheet_data, get_sheet_headers
 
 # --- КОНСТАНТИ ---
 TEXTS_DIR = Path(__file__).parent.parent / "texts"

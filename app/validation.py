@@ -3,7 +3,7 @@
 from typing import Dict, Any, Tuple
 
 # Імпортуємо очікувані ключі, щоб порівняти з тим, що надав користувач
-from .config import APP_INTERNAL_KEYS
+from app.config import APP_INTERNAL_KEYS
 
 def validate_inputs(
     texts: Dict, 

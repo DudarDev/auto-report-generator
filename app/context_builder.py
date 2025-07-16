@@ -2,8 +2,8 @@
 import logging
 from typing import Dict
 # ВИПРАВЛЕНО: відносні імпорти
-from .config import APP_INTERNAL_KEYS
-from .gpt_writer import generate_summary_data
+from app.config import APP_INTERNAL_KEYS
+from app.gpt_writer import generate_summary_data
 
 def build_context(record: Dict) -> Dict:
     """Створює повний контекст для одного запису, включаючи висновок від Gemini."""

@@ -5,8 +5,8 @@ import traceback
 
 # ИЗМЕНЕНО: используем относительный импорт
 from app.ui_components import setup_page_config, language_selector, get_texts
-from .report_generator import generate_and_send_report
-from .validation import validate_inputs
+from app.report_generator import generate_and_send_report
+from app.validation import validate_inputs
 
 def initialize_session_state():
     """Ініціалізує всі ключі session_state в одному місці."""

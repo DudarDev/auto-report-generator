@@ -5,7 +5,7 @@ google-generativeai
 google-cloud-aiplatform
 gspread
 oauth2client
-openai
+google-cloud-secret-manager # <-- ДОДАНО: залежність для роботи з Secret Manager
 
 # Web & UI
 streamlit

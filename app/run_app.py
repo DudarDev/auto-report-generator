@@ -3,8 +3,8 @@
 import streamlit as st
 import traceback
 
-# ИЗМЕНЕНО: используем относительный импорт
-from app.ui_components import setup_page_config, language_selector, get_texts
+# ВИПРАВЛЕНО: Додано 'display_main_ui' до списку імпорту
+from app.ui_components import setup_page_config, language_selector, get_texts, display_main_ui
 from app.report_generator import generate_and_send_report
 from app.validation import validate_inputs
 
